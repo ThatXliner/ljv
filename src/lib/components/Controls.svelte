@@ -20,6 +20,11 @@
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
+
+  async function handleDeviceChange(event: Event) {
+    const target = event.target as HTMLSelectElement;
+    await audioEngine.setOutputDevice(target.value);
+  }
 </script>
 
 <div class="controls">
@@ -48,6 +53,21 @@
       />
     {/if}
   </div>
+
+  {#if audioEngine.availableDevices.length > 0}
+    <div class="device-selector">
+      <label>
+        <span class="label-text">Output Device</span>
+      </label>
+      <select value={audioEngine.selectedDeviceId} onchange={handleDeviceChange}>
+        {#each audioEngine.availableDevices as device}
+          <option value={device.deviceId}>
+            {device.label || `Device ${device.deviceId.slice(0, 8)}`}
+          </option>
+        {/each}
+      </select>
+    </div>
+  {/if}
 
   <h2>Parameters</h2>
 
@@ -235,5 +255,18 @@
 
   select:hover {
     border-color: #6b7280;
+  }
+
+  .device-selector {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+  }
+
+  .device-selector label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    color: #d1d5db;
   }
 </style>

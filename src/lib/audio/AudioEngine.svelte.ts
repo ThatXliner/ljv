@@ -28,6 +28,8 @@ export class AudioEngine {
   #currentTime = $state(0);
   #duration = $state(0);
   #fileName = $state<string | null>(null);
+  #availableDevices = $state<MediaDeviceInfo[]>([]);
+  #selectedDeviceId = $state<string | null>(null);
 
   private fftSize = 2048;
   private leftChannelData: Float32Array;
@@ -42,6 +44,9 @@ export class AudioEngine {
 
   async initialize(): Promise<void> {
     if (this.audioContext) return;
+
+    // Enumerate available audio output devices
+    await this.enumerateDevices();
 
     this.audioContext = new AudioContext();
     this.analyser = this.audioContext.createAnalyser();
@@ -66,6 +71,46 @@ export class AudioEngine {
 
     // Setup frequency band analysers
     this.setupBandAnalysers();
+
+    // Set initial output device if available
+    if (this.#selectedDeviceId && 'setSinkId' in this.audioContext) {
+      await this.setOutputDevice(this.#selectedDeviceId);
+    }
+  }
+
+  private async enumerateDevices(): Promise<void> {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.#availableDevices = devices.filter(device => device.kind === 'audiooutput');
+
+      // Set default device if none selected
+      if (!this.#selectedDeviceId && this.#availableDevices.length > 0) {
+        this.#selectedDeviceId = this.#availableDevices[0].deviceId;
+      }
+
+      // Listen for device changes
+      navigator.mediaDevices.addEventListener('devicechange', () => {
+        this.enumerateDevices();
+      });
+    } catch (error) {
+      console.error('Failed to enumerate audio devices:', error);
+    }
+  }
+
+  async setOutputDevice(deviceId: string): Promise<void> {
+    if (!this.audioContext) return;
+
+    try {
+      // Check if setSinkId is supported (not all browsers support it)
+      if ('setSinkId' in this.audioContext) {
+        await (this.audioContext as any).setSinkId(deviceId);
+        this.#selectedDeviceId = deviceId;
+      } else {
+        console.warn('Audio output device selection not supported in this browser');
+      }
+    } catch (error) {
+      console.error('Failed to set output device:', error);
+    }
   }
 
   private setupBandAnalysers(): void {
@@ -371,6 +416,14 @@ export class AudioEngine {
 
   get fileName(): string | null {
     return this.#fileName;
+  }
+
+  get availableDevices(): MediaDeviceInfo[] {
+    return this.#availableDevices;
+  }
+
+  get selectedDeviceId(): string | null {
+    return this.#selectedDeviceId;
   }
 
   destroy(): void {
