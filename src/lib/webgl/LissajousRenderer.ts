@@ -46,6 +46,7 @@ export class LissajousRenderer {
       projection: gl.getUniformLocation(this.program, 'u_projection')!,
       color: gl.getUniformLocation(this.program, 'u_color')!,
       pointSize: gl.getUniformLocation(this.program, 'u_pointSize')!,
+      isPoints: gl.getUniformLocation(this.program, 'u_isPoints')!,
     };
 
     // Create vertex array object
@@ -119,6 +120,7 @@ export class LissajousRenderer {
       curve.color[3]
     );
     gl.uniform1f(this.uniforms.pointSize, curve.pointSize);
+    gl.uniform1i(this.uniforms.isPoints, curve.renderMode === 'points' ? 1 : 0);
 
     // Draw curve
     const mode = curve.renderMode === 'points' ? gl.POINTS : gl.LINE_STRIP;

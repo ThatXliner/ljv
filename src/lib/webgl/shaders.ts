@@ -13,12 +13,11 @@ export const fragmentShaderSource = `#version 300 es
 precision highp float;
 
 uniform vec4 u_color;
+uniform bool u_isPoints;
 out vec4 outColor;
 
 void main() {
-  // Check if we're rendering points or lines
-  // gl_PointCoord is only valid for GL_POINTS
-  if (gl_PointCoord.x >= 0.0 && gl_PointCoord.x <= 1.0) {
+  if (u_isPoints) {
     // Render points as circles instead of squares
     vec2 coord = gl_PointCoord - vec2(0.5);
     float dist = length(coord);

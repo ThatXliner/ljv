@@ -8,6 +8,7 @@ export interface UniformLocations {
   projection: WebGLUniformLocation;
   color: WebGLUniformLocation;
   pointSize: WebGLUniformLocation;
+  isPoints: WebGLUniformLocation;
 }
 
 export interface AttributeLocations {

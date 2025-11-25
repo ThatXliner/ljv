@@ -121,15 +121,17 @@
     />
   </div>
 
-  <div class="parameter">
-    <label>
-      <span class="label-text">Render Mode</span>
-    </label>
-    <select bind:value={visualizerState.renderMode}>
-      <option value="points">Points</option>
-      <option value="lines">Lines</option>
-    </select>
-  </div>
+  {#if !visualizerState.useMutliBand}
+    <div class="parameter">
+      <label>
+        <span class="label-text">Render Mode</span>
+      </label>
+      <select bind:value={visualizerState.renderMode}>
+        <option value="points">Points</option>
+        <option value="lines">Lines</option>
+      </select>
+    </div>
+  {/if}
 
   <div class="parameter">
     <label>
