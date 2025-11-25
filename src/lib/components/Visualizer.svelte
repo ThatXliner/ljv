@@ -67,6 +67,9 @@
         renderer.render();
       } else {
         // Legacy single curve rendering
+        // Clear multi-band curves to prevent stale data
+        renderer.updateCurves([]);
+
         const leftChannel = audioEngine.getLeftChannelData();
         const rightChannel = audioEngine.getRightChannelData();
 
