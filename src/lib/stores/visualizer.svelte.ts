@@ -1,11 +1,22 @@
 import { AudioEngine } from '$lib/audio/AudioEngine.svelte';
 import type { RenderMode, BlendMode } from '$lib/webgl/types';
+import type { FrequencyBand } from '$lib/audio/AudioEngine.svelte';
 
 // Singleton audio engine instance
 export const audioEngine = new AudioEngine();
 
+// Per-band curve configuration
+export interface BandConfig {
+  enabled: boolean;
+  color: { r: number; g: number; b: number; a: number };
+  pointSize: number;
+  trailLength: number;
+  renderMode: RenderMode;
+}
+
 // Visualizer parameters (reactive with runes)
 class VisualizerState {
+  // Legacy single curve parameters (kept for backwards compatibility)
   color = $state({ r: 0.2, g: 0.8, b: 1.0, a: 1.0 });
   frequencyRatioX = $state(1.0);
   frequencyRatioY = $state(1.0);
@@ -14,6 +25,39 @@ class VisualizerState {
   pointSize = $state(3.0);
   renderMode = $state<RenderMode>('points');
   blendMode = $state<BlendMode>('additive');
+
+  // Multi-band configuration
+  useMutliBand = $state(true);
+  bands = $state<Record<FrequencyBand, BandConfig>>({
+    bass: {
+      enabled: true,
+      color: { r: 1.0, g: 0.2, b: 0.2, a: 0.8 }, // Red
+      pointSize: 4.0,
+      trailLength: 2048,
+      renderMode: 'points',
+    },
+    mids: {
+      enabled: true,
+      color: { r: 0.2, g: 1.0, b: 0.2, a: 0.8 }, // Green
+      pointSize: 3.0,
+      trailLength: 2048,
+      renderMode: 'points',
+    },
+    highs: {
+      enabled: true,
+      color: { r: 0.2, g: 0.6, b: 1.0, a: 0.8 }, // Blue
+      pointSize: 2.0,
+      trailLength: 1024,
+      renderMode: 'points',
+    },
+    melody: {
+      enabled: true,
+      color: { r: 1.0, g: 0.8, b: 0.2, a: 0.9 }, // Gold/Yellow
+      pointSize: 5.0,
+      trailLength: 2048,
+      renderMode: 'points',
+    },
+  });
 }
 
 export const visualizerState = new VisualizerState();

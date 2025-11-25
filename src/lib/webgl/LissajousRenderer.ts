@@ -1,6 +1,6 @@
 import { vertexShaderSource, fragmentShaderSource } from './shaders';
 import { createShader, createProgram, createBuffer, resizeCanvas, createOrthographicProjection } from './utils';
-import type { UniformLocations, AttributeLocations, RenderMode, BlendMode } from './types';
+import type { UniformLocations, AttributeLocations, RenderMode, BlendMode, CurveData } from './types';
 
 export class LissajousRenderer {
   private gl: WebGL2RenderingContext;
@@ -17,6 +17,9 @@ export class LissajousRenderer {
   private renderMode: RenderMode = 'points';
   private blendMode: BlendMode = 'additive';
   private pointCount: number = 0;
+
+  // Multi-curve support
+  private curves: CurveData[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
@@ -84,6 +87,10 @@ export class LissajousRenderer {
     gl.bufferData(gl.ARRAY_BUFFER, points, gl.DYNAMIC_DRAW);
   }
 
+  updateCurves(curves: CurveData[]): void {
+    this.curves = curves;
+  }
+
   render(): void {
     const gl = this.gl;
 
@@ -91,23 +98,53 @@ export class LissajousRenderer {
     gl.clearColor(0, 0, 0, 0.05);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    if (this.pointCount === 0) return;
-
-    // Use program and VAO
+    // Use program
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
 
-    // Set uniforms
+    // Set projection matrix (same for all curves)
     const projectionMatrix = createOrthographicProjection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
-    gl.uniform4f(this.uniforms.color, this.color[0], this.color[1], this.color[2], this.color[3]);
-    gl.uniform1f(this.uniforms.pointSize, this.pointSize);
 
-    // Draw
-    const mode = this.renderMode === 'points' ? gl.POINTS : gl.LINE_STRIP;
-    gl.drawArrays(mode, 0, this.pointCount);
+    // Render multiple curves if provided
+    if (this.curves.length > 0) {
+      for (const curve of this.curves) {
+        this.renderCurve(curve);
+      }
+    } else if (this.pointCount > 0) {
+      // Fallback to single curve rendering for backwards compatibility
+      gl.uniform4f(this.uniforms.color, this.color[0], this.color[1], this.color[2], this.color[3]);
+      gl.uniform1f(this.uniforms.pointSize, this.pointSize);
+      const mode = this.renderMode === 'points' ? gl.POINTS : gl.LINE_STRIP;
+      gl.drawArrays(mode, 0, this.pointCount);
+    }
 
     gl.bindVertexArray(null);
+  }
+
+  private renderCurve(curve: CurveData): void {
+    const gl = this.gl;
+    const pointCount = curve.points.length / 2;
+
+    if (pointCount === 0) return;
+
+    // Upload curve points to buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, curve.points, gl.DYNAMIC_DRAW);
+
+    // Set curve-specific uniforms
+    gl.uniform4f(
+      this.uniforms.color,
+      curve.color[0],
+      curve.color[1],
+      curve.color[2],
+      curve.color[3]
+    );
+    gl.uniform1f(this.uniforms.pointSize, curve.pointSize ?? this.pointSize);
+
+    // Draw curve
+    const mode = (curve.renderMode ?? this.renderMode) === 'points' ? gl.POINTS : gl.LINE_STRIP;
+    gl.drawArrays(mode, 0, pointCount);
   }
 
   setColor(r: number, g: number, b: number, a: number): void {

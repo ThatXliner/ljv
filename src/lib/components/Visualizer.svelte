@@ -3,6 +3,8 @@
   import { LissajousRenderer } from '$lib/webgl/LissajousRenderer';
   import { audioEngine, visualizerState } from '$lib/stores/visualizer.svelte';
   import { audioToLissajousPoints } from '$lib/math/lissajous';
+  import type { CurveData } from '$lib/webgl/types';
+  import type { FrequencyBand } from '$lib/audio/AudioEngine.svelte';
 
   let canvas: HTMLCanvasElement;
   let renderer: LissajousRenderer | null = null;
@@ -32,32 +34,63 @@
       // Update audio current time
       audioEngine.updateCurrentTime();
 
-      // Get audio data
-      const leftChannel = audioEngine.getLeftChannelData();
-      const rightChannel = audioEngine.getRightChannelData();
+      if (visualizerState.useMutliBand) {
+        // Multi-band rendering
+        const curves: CurveData[] = [];
 
-      // Convert to Lissajous points
-      const points = audioToLissajousPoints(
-        leftChannel,
-        rightChannel,
-        visualizerState.trailLength,
-        visualizerState.frequencyRatioX,
-        visualizerState.frequencyRatioY,
-        visualizerState.phase
-      );
+        for (const band of ['bass', 'mids', 'highs', 'melody'] as FrequencyBand[]) {
+          const config = visualizerState.bands[band];
+          if (!config.enabled) continue;
 
-      // Update renderer
-      renderer.updatePoints(points);
-      renderer.setColor(
-        visualizerState.color.r,
-        visualizerState.color.g,
-        visualizerState.color.b,
-        visualizerState.color.a
-      );
-      renderer.setPointSize(visualizerState.pointSize);
-      renderer.setRenderMode(visualizerState.renderMode);
-      renderer.setBlendMode(visualizerState.blendMode);
-      renderer.render();
+          const bandData = audioEngine.getBandData(band);
+          if (!bandData) continue;
+
+          const points = audioToLissajousPoints(
+            bandData.left,
+            bandData.right,
+            config.trailLength,
+            visualizerState.frequencyRatioX,
+            visualizerState.frequencyRatioY,
+            visualizerState.phase
+          );
+
+          curves.push({
+            points,
+            color: [config.color.r, config.color.g, config.color.b, config.color.a],
+            pointSize: config.pointSize,
+            renderMode: config.renderMode,
+          });
+        }
+
+        renderer.updateCurves(curves);
+        renderer.setBlendMode(visualizerState.blendMode);
+        renderer.render();
+      } else {
+        // Legacy single curve rendering
+        const leftChannel = audioEngine.getLeftChannelData();
+        const rightChannel = audioEngine.getRightChannelData();
+
+        const points = audioToLissajousPoints(
+          leftChannel,
+          rightChannel,
+          visualizerState.trailLength,
+          visualizerState.frequencyRatioX,
+          visualizerState.frequencyRatioY,
+          visualizerState.phase
+        );
+
+        renderer.updatePoints(points);
+        renderer.setColor(
+          visualizerState.color.r,
+          visualizerState.color.g,
+          visualizerState.color.b,
+          visualizerState.color.a
+        );
+        renderer.setPointSize(visualizerState.pointSize);
+        renderer.setRenderMode(visualizerState.renderMode);
+        renderer.setBlendMode(visualizerState.blendMode);
+        renderer.render();
+      }
 
       animationFrameId = requestAnimationFrame(render);
     }

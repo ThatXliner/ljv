@@ -4,7 +4,8 @@
   import FileLoader from '$lib/components/FileLoader.svelte';
   import Controls from '$lib/components/Controls.svelte';
   import ColorPicker from '$lib/components/ColorPicker.svelte';
-  import { audioEngine } from '$lib/stores/visualizer.svelte';
+  import BandControls from '$lib/components/BandControls.svelte';
+  import { audioEngine, visualizerState } from '$lib/stores/visualizer.svelte';
 
   onMount(async () => {
     await audioEngine.initialize();
@@ -16,7 +17,14 @@
     <h1>Lissajous Visualizer</h1>
     <FileLoader />
     <Controls />
-    <ColorPicker />
+
+    <h2>Frequency Bands</h2>
+    <BandControls />
+
+    {#if !visualizerState.useMutliBand}
+      <h2>Single Curve</h2>
+      <ColorPicker />
+    {/if}
   </aside>
 
   <main class="visualizer-container">
@@ -76,6 +84,14 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  h2 {
+    font-size: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #e5e7eb;
+    font-weight: 600;
   }
 
   .visualizer-container {

@@ -16,3 +16,10 @@ export interface AttributeLocations {
 
 export type RenderMode = 'points' | 'lines';
 export type BlendMode = 'normal' | 'additive';
+
+export interface CurveData {
+  points: Float32Array;
+  color: [number, number, number, number];
+  pointSize?: number;
+  renderMode?: RenderMode;
+}
