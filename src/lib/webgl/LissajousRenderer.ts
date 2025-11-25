@@ -14,6 +14,7 @@ export class LissajousRenderer {
   // Rendering state
   private blendMode: BlendMode = 'additive';
   private curves: CurveData[] = [];
+  private rotation: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
@@ -47,6 +48,7 @@ export class LissajousRenderer {
       color: gl.getUniformLocation(this.program, 'u_color')!,
       pointSize: gl.getUniformLocation(this.program, 'u_pointSize')!,
       isPoints: gl.getUniformLocation(this.program, 'u_isPoints')!,
+      rotation: gl.getUniformLocation(this.program, 'u_rotation')!,
     };
 
     // Create vertex array object
@@ -78,6 +80,10 @@ export class LissajousRenderer {
     this.curves = curves;
   }
 
+  setRotation(angle: number): void {
+    this.rotation = angle;
+  }
+
   render(): void {
     const gl = this.gl;
 
@@ -92,6 +98,9 @@ export class LissajousRenderer {
     // Set projection matrix (same for all curves)
     const projectionMatrix = createOrthographicProjection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
+
+    // Set rotation (same for all curves)
+    gl.uniform1f(this.uniforms.rotation, this.rotation);
 
     // Render all curves
     for (const curve of this.curves) {

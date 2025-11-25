@@ -26,6 +26,9 @@ class VisualizerState {
   renderMode = $state<RenderMode>('points');
   blendMode = $state<BlendMode>('additive');
 
+  // Rotation parameters
+  rotationSpeed = $state(0.0); // radians per second (0 = no rotation)
+
   // Multi-band mode toggle
   useMutliBand = $state(true);
   bands = $state<Record<FrequencyBand, BandConfig>>({

@@ -9,6 +9,7 @@
   let canvas: HTMLCanvasElement;
   let renderer: LissajousRenderer | null = null;
   let animationFrameId: number;
+  let startTime: number = Date.now();
 
   onMount(() => {
     try {
@@ -33,6 +34,11 @@
 
       // Update audio current time
       audioEngine.updateCurrentTime();
+
+      // Calculate rotation based on elapsed time
+      const elapsedTime = (Date.now() - startTime) / 1000; // Convert to seconds
+      const rotation = elapsedTime * visualizerState.rotationSpeed;
+      renderer.setRotation(rotation);
 
       const curves: CurveData[] = [];
 

@@ -9,6 +9,7 @@ export interface UniformLocations {
   color: WebGLUniformLocation;
   pointSize: WebGLUniformLocation;
   isPoints: WebGLUniformLocation;
+  rotation: WebGLUniformLocation;
 }
 
 export interface AttributeLocations {

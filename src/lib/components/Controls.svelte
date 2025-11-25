@@ -115,6 +115,20 @@
 
   <div class="parameter">
     <label>
+      <span class="label-text">Rotation Speed</span>
+      <span class="value">{visualizerState.rotationSpeed.toFixed(2)}</span>
+    </label>
+    <input
+      type="range"
+      bind:value={visualizerState.rotationSpeed}
+      min="0.0"
+      max="2.0"
+      step="0.05"
+    />
+  </div>
+
+  <div class="parameter">
+    <label>
       <span class="label-text">Trail Length</span>
       <span class="value">{visualizerState.trailLength}</span>
     </label>

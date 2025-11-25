@@ -2,9 +2,18 @@ export const vertexShaderSource = `#version 300 es
 in vec2 a_position;
 uniform mat4 u_projection;
 uniform float u_pointSize;
+uniform float u_rotation;
 
 void main() {
-  gl_Position = u_projection * vec4(a_position, 0.0, 1.0);
+  // Apply rotation around the origin
+  float cosR = cos(u_rotation);
+  float sinR = sin(u_rotation);
+  vec2 rotated = vec2(
+    a_position.x * cosR - a_position.y * sinR,
+    a_position.x * sinR + a_position.y * cosR
+  );
+
+  gl_Position = u_projection * vec4(rotated, 0.0, 1.0);
   gl_PointSize = u_pointSize;
 }
 `;
