@@ -2,7 +2,7 @@
 
 A beautiful real-time music visualizer that creates mesmerizing Lissajous curves from your audio files. Built with modern web technologies and packaged as a native desktop application.
 
-![Demo](./output.mov)
+https://github.com/user-attachments/assets/023d03e6-edbb-4917-b737-868a8abc169c
 
 Note that the demo audio is scuffed because I'm recording the playback.
 
