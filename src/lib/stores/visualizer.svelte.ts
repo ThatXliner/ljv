@@ -16,7 +16,7 @@ export interface BandConfig {
 
 // Visualizer parameters (reactive with runes)
 class VisualizerState {
-  // Legacy single curve parameters (kept for backwards compatibility)
+  // Single-band curve parameters
   color = $state({ r: 0.2, g: 0.8, b: 1.0, a: 1.0 });
   frequencyRatioX = $state(1.0);
   frequencyRatioY = $state(1.0);
@@ -26,7 +26,7 @@ class VisualizerState {
   renderMode = $state<RenderMode>('points');
   blendMode = $state<BlendMode>('additive');
 
-  // Multi-band configuration
+  // Multi-band mode toggle
   useMutliBand = $state(true);
   bands = $state<Record<FrequencyBand, BandConfig>>({
     bass: {

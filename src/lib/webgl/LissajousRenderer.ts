@@ -12,13 +12,7 @@ export class LissajousRenderer {
   private attributes: AttributeLocations;
 
   // Rendering state
-  private color: [number, number, number, number] = [0.2, 0.8, 1.0, 1.0];
-  private pointSize: number = 3.0;
-  private renderMode: RenderMode = 'points';
   private blendMode: BlendMode = 'additive';
-  private pointCount: number = 0;
-
-  // Multi-curve support
   private curves: CurveData[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
@@ -79,14 +73,6 @@ export class LissajousRenderer {
     this.resize();
   }
 
-  updatePoints(points: Float32Array): void {
-    const gl = this.gl;
-    this.pointCount = points.length / 2;
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, points, gl.DYNAMIC_DRAW);
-  }
-
   updateCurves(curves: CurveData[]): void {
     this.curves = curves;
   }
@@ -106,17 +92,9 @@ export class LissajousRenderer {
     const projectionMatrix = createOrthographicProjection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
 
-    // Render multiple curves if provided
-    if (this.curves.length > 0) {
-      for (const curve of this.curves) {
-        this.renderCurve(curve);
-      }
-    } else if (this.pointCount > 0) {
-      // Fallback to single curve rendering for backwards compatibility
-      gl.uniform4f(this.uniforms.color, this.color[0], this.color[1], this.color[2], this.color[3]);
-      gl.uniform1f(this.uniforms.pointSize, this.pointSize);
-      const mode = this.renderMode === 'points' ? gl.POINTS : gl.LINE_STRIP;
-      gl.drawArrays(mode, 0, this.pointCount);
+    // Render all curves
+    for (const curve of this.curves) {
+      this.renderCurve(curve);
     }
 
     gl.bindVertexArray(null);
@@ -140,23 +118,11 @@ export class LissajousRenderer {
       curve.color[2],
       curve.color[3]
     );
-    gl.uniform1f(this.uniforms.pointSize, curve.pointSize ?? this.pointSize);
+    gl.uniform1f(this.uniforms.pointSize, curve.pointSize);
 
     // Draw curve
-    const mode = (curve.renderMode ?? this.renderMode) === 'points' ? gl.POINTS : gl.LINE_STRIP;
+    const mode = curve.renderMode === 'points' ? gl.POINTS : gl.LINE_STRIP;
     gl.drawArrays(mode, 0, pointCount);
-  }
-
-  setColor(r: number, g: number, b: number, a: number): void {
-    this.color = [r, g, b, a];
-  }
-
-  setPointSize(size: number): void {
-    this.pointSize = size;
-  }
-
-  setRenderMode(mode: RenderMode): void {
-    this.renderMode = mode;
   }
 
   setBlendMode(mode: BlendMode): void {

@@ -17,7 +17,7 @@ export class AudioEngine {
   private splitter: ChannelSplitterNode | null = null;
   private merger: ChannelMergerNode | null = null;
 
-  // Separate analysers for legacy stereo mode
+  // Separate analysers for single-band stereo mode
   private leftAnalyser: AnalyserNode | null = null;
   private rightAnalyser: AnalyserNode | null = null;
 
@@ -48,7 +48,7 @@ export class AudioEngine {
     this.analyser.fftSize = this.fftSize;
     this.analyser.smoothingTimeConstant = 0.8;
 
-    // Create separate analysers for stereo channels (legacy mode)
+    // Create separate analysers for stereo channels (single-band mode)
     this.leftAnalyser = this.audioContext.createAnalyser();
     this.leftAnalyser.fftSize = this.fftSize;
     this.leftAnalyser.smoothingTimeConstant = 0.8;
@@ -174,7 +174,7 @@ export class AudioEngine {
     // Connect channel splitter for stereo separation
     this.source.connect(this.splitter);
 
-    // Connect stereo analysers for legacy mode
+    // Connect stereo analysers for single-band mode
     this.splitter.connect(this.leftAnalyser, 0);
     this.splitter.connect(this.rightAnalyser, 1);
 

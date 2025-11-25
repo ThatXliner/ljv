@@ -20,6 +20,6 @@ export type BlendMode = 'normal' | 'additive';
 export interface CurveData {
   points: Float32Array;
   color: [number, number, number, number];
-  pointSize?: number;
-  renderMode?: RenderMode;
+  pointSize: number;
+  renderMode: RenderMode;
 }

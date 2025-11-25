@@ -34,10 +34,10 @@
       // Update audio current time
       audioEngine.updateCurrentTime();
 
-      if (visualizerState.useMutliBand) {
-        // Multi-band rendering
-        const curves: CurveData[] = [];
+      const curves: CurveData[] = [];
 
+      if (visualizerState.useMutliBand) {
+        // Multi-band: render each enabled frequency band
         for (const band of ['bass', 'mids', 'highs', 'melody'] as FrequencyBand[]) {
           const config = visualizerState.bands[band];
           if (!config.enabled) continue;
@@ -61,15 +61,8 @@
             renderMode: config.renderMode,
           });
         }
-
-        renderer.updateCurves(curves);
-        renderer.setBlendMode(visualizerState.blendMode);
-        renderer.render();
       } else {
-        // Legacy single curve rendering
-        // Clear multi-band curves to prevent stale data
-        renderer.updateCurves([]);
-
+        // Single-band: render full-spectrum stereo as one curve
         const leftChannel = audioEngine.getLeftChannelData();
         const rightChannel = audioEngine.getRightChannelData();
 
@@ -82,18 +75,17 @@
           visualizerState.phase
         );
 
-        renderer.updatePoints(points);
-        renderer.setColor(
-          visualizerState.color.r,
-          visualizerState.color.g,
-          visualizerState.color.b,
-          visualizerState.color.a
-        );
-        renderer.setPointSize(visualizerState.pointSize);
-        renderer.setRenderMode(visualizerState.renderMode);
-        renderer.setBlendMode(visualizerState.blendMode);
-        renderer.render();
+        curves.push({
+          points,
+          color: [visualizerState.color.r, visualizerState.color.g, visualizerState.color.b, visualizerState.color.a],
+          pointSize: visualizerState.pointSize,
+          renderMode: visualizerState.renderMode,
+        });
       }
+
+      renderer.updateCurves(curves);
+      renderer.setBlendMode(visualizerState.blendMode);
+      renderer.render();
 
       animationFrameId = requestAnimationFrame(render);
     }
