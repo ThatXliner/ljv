@@ -17,6 +17,10 @@ export class AudioEngine {
   private splitter: ChannelSplitterNode | null = null;
   private merger: ChannelMergerNode | null = null;
 
+  // Separate analysers for legacy stereo mode
+  private leftAnalyser: AnalyserNode | null = null;
+  private rightAnalyser: AnalyserNode | null = null;
+
   // Frequency band analysers
   private bandAnalysers: Map<FrequencyBand, BandAnalyser> = new Map();
 
@@ -43,6 +47,15 @@ export class AudioEngine {
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = this.fftSize;
     this.analyser.smoothingTimeConstant = 0.8;
+
+    // Create separate analysers for stereo channels (legacy mode)
+    this.leftAnalyser = this.audioContext.createAnalyser();
+    this.leftAnalyser.fftSize = this.fftSize;
+    this.leftAnalyser.smoothingTimeConstant = 0.8;
+
+    this.rightAnalyser = this.audioContext.createAnalyser();
+    this.rightAnalyser.fftSize = this.fftSize;
+    this.rightAnalyser.smoothingTimeConstant = 0.8;
 
     this.gainNode = this.audioContext.createGain();
     this.splitter = this.audioContext.createChannelSplitter(2);
@@ -135,7 +148,7 @@ export class AudioEngine {
   }
 
   play(): void {
-    if (!this.audioContext || !this.buffer || !this.gainNode || !this.analyser || !this.splitter || !this.merger) {
+    if (!this.audioContext || !this.buffer || !this.gainNode || !this.analyser || !this.splitter || !this.merger || !this.leftAnalyser || !this.rightAnalyser) {
       return;
     }
 
@@ -160,6 +173,10 @@ export class AudioEngine {
 
     // Connect channel splitter for stereo separation
     this.source.connect(this.splitter);
+
+    // Connect stereo analysers for legacy mode
+    this.splitter.connect(this.leftAnalyser, 0);
+    this.splitter.connect(this.rightAnalyser, 1);
 
     // Connect each frequency band analyser
     for (const [band, analyser] of this.bandAnalysers.entries()) {
@@ -228,30 +245,21 @@ export class AudioEngine {
   }
 
   getLeftChannelData(): Float32Array {
-    if (!this.analyser) {
+    if (!this.leftAnalyser) {
       return this.leftChannelData;
     }
 
-    this.analyser.getFloatTimeDomainData(this.leftChannelData);
+    this.leftAnalyser.getFloatTimeDomainData(this.leftChannelData);
     return this.leftChannelData;
   }
 
   getRightChannelData(): Float32Array {
-    if (!this.analyser) {
+    if (!this.rightAnalyser) {
       return this.rightChannelData;
     }
 
-    // For simplicity, we'll get the same time domain data
-    // In a more sophisticated version, we'd split channels properly
-    this.analyser.getFloatTimeDomainData(this.rightChannelData);
-
-    // Offset slightly to create stereo effect
-    const offset = Math.floor(this.fftSize * 0.1);
-    const temp = new Float32Array(this.fftSize);
-    for (let i = 0; i < this.fftSize - offset; i++) {
-      temp[i] = this.rightChannelData[i + offset];
-    }
-    return temp;
+    this.rightAnalyser.getFloatTimeDomainData(this.rightChannelData);
+    return this.rightChannelData;
   }
 
   getBandData(band: FrequencyBand): { left: Float32Array; right: Float32Array } | null {
