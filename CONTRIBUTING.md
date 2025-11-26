@@ -25,10 +25,10 @@ LJV uses a **browser-heavy architecture** where audio processing and visualizati
 
 ```bash
 # Start the Tauri app in development mode
-npm run tauri dev
+bun run tauri dev
 
 # Or run just the frontend (for web development)
-npm run dev
+bun run dev
 ```
 
 The Tauri development mode includes:
@@ -40,7 +40,7 @@ The Tauri development mode includes:
 
 ```bash
 # Build the production desktop app
-npm run tauri build
+bun run tauri build
 ```
 
 The built application will be available in `src-tauri/target/release/bundle/`.
@@ -49,10 +49,10 @@ The built application will be available in `src-tauri/target/release/bundle/`.
 
 ```bash
 # One-time type check
-npm run check
+bun run check
 
 # Watch mode
-npm run check:watch
+bun run check:watch
 ```
 
 ## Project Structure

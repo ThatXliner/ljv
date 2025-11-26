@@ -98,16 +98,16 @@ User selects file (FileLoader)
 
 ### Frontend Development
 ```bash
-npm run dev              # Start Vite dev server (http://localhost:1420)
-npm run build           # Build frontend for production
-npm run check           # Type-check TypeScript and Svelte files
-npm run check:watch     # Type-check in watch mode
+bun run dev              # Start Vite dev server (http://localhost:1420)
+bun run build           # Build frontend for production
+bun run check           # Type-check TypeScript and Svelte files
+bun run check:watch     # Type-check in watch mode
 ```
 
 ### Desktop Application
 ```bash
-npm run tauri dev       # Run Tauri app in development mode (rebuilds Rust on changes)
-npm run tauri build     # Build production desktop app
+bun run tauri dev       # Run Tauri app in development mode (rebuilds Rust on changes)
+bun run tauri build     # Build production desktop app
 ```
 
 ### Tauri-Specific

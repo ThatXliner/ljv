@@ -31,7 +31,7 @@ Lissajous curves are mathematical figures created by plotting two sinusoidal osc
 
 ### Prerequisites
 
-- Node.js (v18 or later)
+- Bun (JavaScript runtime)
 - Rust (latest stable)
 - System dependencies for Tauri (see [Tauri Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites))
 
@@ -43,7 +43,7 @@ git clone https://github.com/ThatXliner/ljv/tree/main?tab=readme-ov-file
 cd ljv
 
 # Install dependencies
-npm install
+bun install
 ```
 
 ## Contributing
