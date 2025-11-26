@@ -23,8 +23,6 @@ jobs:
             args: ""
           - platform: "windows-latest"
             args: ""
-          - platform: "windows-11-arm"
-            args: ""
 
     runs-on: ${{ matrix.platform }}
     steps:
