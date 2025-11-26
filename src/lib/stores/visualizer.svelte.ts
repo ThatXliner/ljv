@@ -34,7 +34,7 @@ class VisualizerState {
   rotationSpeed = $state(0.0); // radians per second (0 = no rotation)
 
   // 3D rendering
-  enable3D = $state(true);
+  enable3D = $state(false);
   zMode = $state<'time' | 'frequency' | 'phase' | 'parametric'>('phase'); // How to generate Z coordinate
   zScale = $state(1.0); // Scaling factor for Z depth
 
