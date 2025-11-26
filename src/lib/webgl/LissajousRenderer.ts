@@ -1,6 +1,7 @@
 import { vertexShaderSource, fragmentShaderSource } from './shaders';
 import { createShader, createProgram, createBuffer, resizeCanvas, createOrthographicProjection } from './utils';
 import type { UniformLocations, AttributeLocations, RenderMode, BlendMode, CurveData } from './types';
+import { createPerspectiveMatrix, createViewMatrix, createIdentityMatrix, type CameraState } from './camera';
 
 export class LissajousRenderer {
   private gl: WebGL2RenderingContext;
@@ -15,12 +16,15 @@ export class LissajousRenderer {
   private blendMode: BlendMode = 'additive';
   private curves: CurveData[] = [];
   private rotation: number = 0;
+  private enable3D: boolean = true;
+  private cameraState: CameraState | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', {
       alpha: true,
       antialias: true,
       premultipliedAlpha: false,
+      depth: true, // Enable depth buffer for 3D
     });
 
     if (!gl) {
@@ -45,10 +49,12 @@ export class LissajousRenderer {
 
     this.uniforms = {
       projection: gl.getUniformLocation(this.program, 'u_projection')!,
+      view: gl.getUniformLocation(this.program, 'u_view')!,
+      model: gl.getUniformLocation(this.program, 'u_model')!,
       color: gl.getUniformLocation(this.program, 'u_color')!,
       pointSize: gl.getUniformLocation(this.program, 'u_pointSize')!,
       isPoints: gl.getUniformLocation(this.program, 'u_isPoints')!,
-      rotation: gl.getUniformLocation(this.program, 'u_rotation')!,
+      enable3D: gl.getUniformLocation(this.program, 'u_enable3D')!,
     };
 
     // Create vertex array object
@@ -61,11 +67,11 @@ export class LissajousRenderer {
     // Create position buffer
     this.positionBuffer = createBuffer(gl);
 
-    // Setup VAO
+    // Setup VAO (using 3 components for vec3 position)
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
     gl.enableVertexAttribArray(this.attributes.position);
-    gl.vertexAttribPointer(this.attributes.position, 2, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(this.attributes.position, 3, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
     // Setup WebGL state
@@ -84,23 +90,63 @@ export class LissajousRenderer {
     this.rotation = angle;
   }
 
+  setEnable3D(enable: boolean): void {
+    this.enable3D = enable;
+    const gl = this.gl;
+
+    if (enable) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+    } else {
+      gl.disable(gl.DEPTH_TEST);
+    }
+  }
+
+  setCamera(camera: CameraState): void {
+    this.cameraState = camera;
+  }
+
   render(): void {
     const gl = this.gl;
 
     // Clear with slight trail effect
     gl.clearColor(0, 0, 0, 0.05);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Use program
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
 
-    // Set projection matrix (same for all curves)
-    const projectionMatrix = createOrthographicProjection(gl.canvas.width, gl.canvas.height);
-    gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
+    // Set 3D mode
+    gl.uniform1i(this.uniforms.enable3D, this.enable3D ? 1 : 0);
 
-    // Set rotation (same for all curves)
-    gl.uniform1f(this.uniforms.rotation, this.rotation);
+    // Set matrices
+    if (this.enable3D && this.cameraState) {
+      // 3D mode with perspective projection and camera
+      const canvas = gl.canvas as HTMLCanvasElement;
+      const aspect = canvas.width / canvas.height;
+      const projectionMatrix = createPerspectiveMatrix(
+        this.cameraState.fov,
+        aspect,
+        this.cameraState.near,
+        this.cameraState.far
+      );
+      const viewMatrix = createViewMatrix(this.cameraState);
+
+      gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
+      gl.uniformMatrix4fv(this.uniforms.view, false, viewMatrix);
+    } else {
+      // 2D mode with orthographic projection
+      const projectionMatrix = createOrthographicProjection(gl.canvas.width, gl.canvas.height);
+      const identityMatrix = createIdentityMatrix();
+
+      gl.uniformMatrix4fv(this.uniforms.projection, false, projectionMatrix);
+      gl.uniformMatrix4fv(this.uniforms.view, false, identityMatrix);
+    }
+
+    // Set model matrix (includes rotation for both 2D and 3D)
+    const modelMatrix = this.createModelMatrix();
+    gl.uniformMatrix4fv(this.uniforms.model, false, modelMatrix);
 
     // Render all curves
     for (const curve of this.curves) {
@@ -110,9 +156,22 @@ export class LissajousRenderer {
     gl.bindVertexArray(null);
   }
 
+  private createModelMatrix(): Float32Array {
+    // For now, just use rotation around Z axis
+    const c = Math.cos(this.rotation);
+    const s = Math.sin(this.rotation);
+
+    return new Float32Array([
+      c, s, 0, 0,
+      -s, c, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1
+    ]);
+  }
+
   private renderCurve(curve: CurveData): void {
     const gl = this.gl;
-    const pointCount = curve.points.length / 2;
+    const pointCount = curve.points.length / 3;
 
     if (pointCount === 0) return;
 

@@ -6,10 +6,12 @@ export interface WebGLContext {
 
 export interface UniformLocations {
   projection: WebGLUniformLocation;
+  view: WebGLUniformLocation;
+  model: WebGLUniformLocation;
   color: WebGLUniformLocation;
   pointSize: WebGLUniformLocation;
   isPoints: WebGLUniformLocation;
-  rotation: WebGLUniformLocation;
+  enable3D: WebGLUniformLocation;
 }
 
 export interface AttributeLocations {

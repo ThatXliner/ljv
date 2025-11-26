@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { visualizerState, audioEngine } from '$lib/stores/visualizer.svelte';
+  import { visualizerState, audioEngine, camera } from '$lib/stores/visualizer.svelte';
 
   function togglePlayback() {
     if (audioEngine.isPlaying) {
@@ -69,6 +69,23 @@
     </div>
   {/if}
 
+  <h2>Rendering Mode</h2>
+
+  <div class="toggle-group">
+    <button
+      class="toggle-button {!visualizerState.enable3D ? 'active' : ''}"
+      onclick={() => visualizerState.enable3D = false}
+    >
+      2D Mode
+    </button>
+    <button
+      class="toggle-button {visualizerState.enable3D ? 'active' : ''}"
+      onclick={() => visualizerState.enable3D = true}
+    >
+      3D Mode
+    </button>
+  </div>
+
   <h2>Parameters</h2>
 
   <div class="parameter">
@@ -99,9 +116,25 @@
     />
   </div>
 
+  {#if visualizerState.enable3D}
+    <div class="parameter">
+      <label>
+        <span class="label-text">Frequency Ratio Z</span>
+        <span class="value">{visualizerState.frequencyRatioZ.toFixed(1)}</span>
+      </label>
+      <input
+        type="range"
+        bind:value={visualizerState.frequencyRatioZ}
+        min="0.5"
+        max="4.0"
+        step="0.1"
+      />
+    </div>
+  {/if}
+
   <div class="parameter">
     <label>
-      <span class="label-text">Phase</span>
+      <span class="label-text">Phase {visualizerState.enable3D ? '(X/Y)' : ''}</span>
       <span class="value">{visualizerState.phase.toFixed(2)}</span>
     </label>
     <input
@@ -112,6 +145,22 @@
       step="0.1"
     />
   </div>
+
+  {#if visualizerState.enable3D}
+    <div class="parameter">
+      <label>
+        <span class="label-text">Phase Z</span>
+        <span class="value">{visualizerState.phaseZ.toFixed(2)}</span>
+      </label>
+      <input
+        type="range"
+        bind:value={visualizerState.phaseZ}
+        min="0"
+        max={Math.PI * 2}
+        step="0.1"
+      />
+    </div>
+  {/if}
 
   <div class="parameter">
     <label>
@@ -176,6 +225,83 @@
       <option value="normal">Normal</option>
     </select>
   </div>
+
+  {#if visualizerState.enable3D}
+    <h2>3D Settings</h2>
+
+    <div class="parameter">
+      <label>
+        <span class="label-text">Z-Axis Mode</span>
+      </label>
+      <select bind:value={visualizerState.zMode}>
+        <option value="parametric">Parametric (3D Knots)</option>
+        <option value="time">Time (Tunnel Effect)</option>
+        <option value="frequency">Frequency Magnitude</option>
+        <option value="phase">Phase Relationship</option>
+      </select>
+    </div>
+
+    <div class="parameter">
+      <label>
+        <span class="label-text">Z-Depth Scale</span>
+        <span class="value">{visualizerState.zScale.toFixed(1)}</span>
+      </label>
+      <input
+        type="range"
+        bind:value={visualizerState.zScale}
+        min="0.1"
+        max="3.0"
+        step="0.1"
+      />
+    </div>
+
+    <h2>Camera</h2>
+
+    <div class="parameter">
+      <label>
+        <span class="label-text">Distance</span>
+        <span class="value">{camera.state.distance.toFixed(1)}</span>
+      </label>
+      <input
+        type="range"
+        bind:value={camera.state.distance}
+        min="0.5"
+        max="20"
+        step="0.1"
+      />
+    </div>
+
+    <div class="parameter">
+      <label>
+        <span class="label-text">Field of View</span>
+        <span class="value">{camera.state.fov.toFixed(0)}°</span>
+      </label>
+      <input
+        type="range"
+        bind:value={camera.state.fov}
+        min="30"
+        max="120"
+        step="5"
+      />
+    </div>
+
+    <div class="parameter">
+      <button class="reset-button" onclick={() => camera.reset()}>
+        Reset Camera
+      </button>
+    </div>
+
+    <div class="help-text">
+      <strong>Camera Controls:</strong><br>
+      • Left-click & drag: Orbit<br>
+      • Right-click & drag: Pan<br>
+      • Mouse wheel: Zoom<br>
+      • Arrow keys: Rotate<br>
+      • WASD: Pan<br>
+      • Q/E: Zoom in/out<br>
+      • R: Reset camera
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -282,5 +408,75 @@
     margin-bottom: 0.25rem;
     font-size: 0.85rem;
     color: #d1d5db;
+  }
+
+  input[type='checkbox'] {
+    width: auto;
+    margin-left: 0.5rem;
+    cursor: pointer;
+  }
+
+  .reset-button {
+    width: 100%;
+    padding: 0.5rem;
+    background: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+    border-radius: 0.375rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .reset-button:hover {
+    background: #4b5563;
+  }
+
+  .help-text {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #1f2937;
+    border-left: 3px solid #2563eb;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #9ca3af;
+  }
+
+  .help-text strong {
+    color: #d1d5db;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .toggle-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .toggle-button {
+    flex: 1;
+    padding: 0.75rem;
+    background: #374151;
+    color: #9ca3af;
+    border: 2px solid #4b5563;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .toggle-button:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+
+  .toggle-button.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
   }
 </style>

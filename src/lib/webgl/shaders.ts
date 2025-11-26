@@ -1,20 +1,28 @@
 export const vertexShaderSource = `#version 300 es
-in vec2 a_position;
+in vec3 a_position;
 uniform mat4 u_projection;
+uniform mat4 u_view;
+uniform mat4 u_model;
 uniform float u_pointSize;
-uniform float u_rotation;
+uniform bool u_enable3D;
 
 void main() {
-  // Apply rotation around the origin
-  float cosR = cos(u_rotation);
-  float sinR = sin(u_rotation);
-  vec2 rotated = vec2(
-    a_position.x * cosR - a_position.y * sinR,
-    a_position.x * sinR + a_position.y * cosR
-  );
+  vec4 position;
 
-  gl_Position = u_projection * vec4(rotated, 0.0, 1.0);
-  gl_PointSize = u_pointSize;
+  if (u_enable3D) {
+    // 3D rendering with camera matrices
+    position = u_projection * u_view * u_model * vec4(a_position, 1.0);
+
+    // Perspective point size attenuation
+    float distance = length((u_view * u_model * vec4(a_position, 1.0)).xyz);
+    gl_PointSize = u_pointSize * (10.0 / max(1.0, distance));
+  } else {
+    // 2D rendering (legacy mode) - use only X and Y
+    position = u_projection * u_model * vec4(a_position.xy, 0.0, 1.0);
+    gl_PointSize = u_pointSize;
+  }
+
+  gl_Position = position;
 }
 `;
 
