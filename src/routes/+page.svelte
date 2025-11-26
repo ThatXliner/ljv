@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Visualizer from '$lib/components/Visualizer.svelte';
   import FileLoader from '$lib/components/FileLoader.svelte';
+  import DemoAudioLoader from '$lib/components/DemoAudioLoader.svelte';
   import Controls from '$lib/components/Controls.svelte';
   import ColorPicker from '$lib/components/ColorPicker.svelte';
   import BandControls from '$lib/components/BandControls.svelte';
@@ -16,6 +17,7 @@
   <aside class="sidebar">
     <h1>Lissajous Visualizer</h1>
     <FileLoader />
+    <DemoAudioLoader />
     <Controls />
 
     <h2>Frequency Bands</h2>
