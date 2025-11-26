@@ -6,9 +6,7 @@ A beautiful real-time music visualizer that creates mesmerizing Lissajous curves
 
 https://github.com/user-attachments/assets/51c64a37-9208-4988-943e-affd418333a1
 
-
-
-Note that the demo audio is scuffed because I'm recording the playback.
+*Note that the demo audio is scuffed because I'm recording the playback. Also, if the video doesn't work, [try YouTube](https://youtu.be/b0tc8OLiZp8)*
 
 Music in the demo is [Razihel - Love U](http://ncs.io/loveu) provided by NoCopyrightSounds
 
