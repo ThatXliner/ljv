@@ -13,9 +13,9 @@ void main() {
     // 3D rendering with camera matrices
     position = u_projection * u_view * u_model * vec4(a_position, 1.0);
 
-    // Perspective point size attenuation
+    // Perspective point size attenuation (3x smaller base size for 3D)
     float distance = length((u_view * u_model * vec4(a_position, 1.0)).xyz);
-    gl_PointSize = u_pointSize * (10.0 / max(1.0, distance));
+    gl_PointSize = (u_pointSize / 3.0) * (10.0 / max(1.0, distance));
   } else {
     // 2D rendering (legacy mode) - use only X and Y
     position = u_projection * u_model * vec4(a_position.xy, 0.0, 1.0);

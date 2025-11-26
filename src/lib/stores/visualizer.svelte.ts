@@ -35,7 +35,7 @@ class VisualizerState {
 
   // 3D rendering
   enable3D = $state(true);
-  zMode = $state<'time' | 'frequency' | 'phase' | 'parametric'>('parametric'); // How to generate Z coordinate
+  zMode = $state<'time' | 'frequency' | 'phase' | 'parametric'>('phase'); // How to generate Z coordinate
   zScale = $state(1.0); // Scaling factor for Z depth
 
   // Multi-band mode toggle
