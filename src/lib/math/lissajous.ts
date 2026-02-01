@@ -17,9 +17,19 @@ export function audioToLissajousPoints(
   const componentsPerPoint = enable3D ? 3 : 2;
   const points = new Float32Array(pointCount * componentsPerPoint);
 
+  // Normalization factor for Mid/Side conversion (1/√2)
+  const SQRT2_INV = 0.7071067811865476;
+
   for (let i = 0; i < pointCount; i++) {
-    let x = leftChannel[i];
-    let y = rightChannel[i];
+    const left = leftChannel[i];
+    const right = rightChannel[i];
+
+    // Goniometer transformation: Convert L/R to Mid/Side
+    // Mid (mono content) = (L + R) / √2 -> maps to Y axis (vertical)
+    // Side (stereo width) = (L - R) / √2 -> maps to X axis (horizontal)
+    // This creates a 45° rotated display like traditional goniometers
+    let mid = (left + right) * SQRT2_INV;
+    let side = (left - right) * SQRT2_INV;
 
     // Apply frequency ratio and phase transformations
     if (frequencyRatioX !== 1.0 || frequencyRatioY !== 1.0 || phase !== 0) {
@@ -27,10 +37,14 @@ export function audioToLissajousPoints(
       const transformedX = Math.sin(frequencyRatioX * t + phase) * 0.5;
       const transformedY = Math.sin(frequencyRatioY * t) * 0.5;
 
-      // Blend original audio with transformation
-      x = x * 0.7 + transformedX * 0.3;
-      y = y * 0.7 + transformedY * 0.3;
+      // Blend with transformation
+      side = side * 0.7 + transformedX * 0.3;
+      mid = mid * 0.7 + transformedY * 0.3;
     }
+
+    // Assign: X = Side, Y = Mid
+    let x = side;
+    let y = mid;
 
     if (enable3D) {
       // Calculate Z coordinate based on mode
