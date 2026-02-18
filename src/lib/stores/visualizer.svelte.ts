@@ -14,6 +14,9 @@ export interface BandConfig {
   pointSize: number;
   trailLength: number;
   renderMode: RenderMode;
+  filterFrequency: number; // Hz - cutoff/center frequency (ignored for melody)
+  filterQ: number;         // Q factor / resonance (ignored for melody)
+  melodyHarmonicDepth: number; // 1–32, used only by melody band
 }
 
 // Visualizer parameters (reactive with runes)
@@ -47,6 +50,9 @@ class VisualizerState {
       pointSize: 4.0,
       trailLength: 2048,
       renderMode: 'points',
+      filterFrequency: 250,
+      filterQ: 0.7,
+      melodyHarmonicDepth: 1, // sentinel, unused
     },
     mids: {
       enabled: true,
@@ -54,6 +60,9 @@ class VisualizerState {
       pointSize: 3.0,
       trailLength: 2048,
       renderMode: 'points',
+      filterFrequency: 2125,
+      filterQ: 0.5,
+      melodyHarmonicDepth: 1, // sentinel, unused
     },
     highs: {
       enabled: true,
@@ -61,6 +70,9 @@ class VisualizerState {
       pointSize: 2.0,
       trailLength: 1024,
       renderMode: 'points',
+      filterFrequency: 4000,
+      filterQ: 0.7,
+      melodyHarmonicDepth: 1, // sentinel, unused
     },
     melody: {
       enabled: true,
@@ -68,6 +80,9 @@ class VisualizerState {
       pointSize: 5.0,
       trailLength: 2048,
       renderMode: 'points',
+      filterFrequency: 0,   // unused for melody
+      filterQ: 0,           // unused for melody
+      melodyHarmonicDepth: 8,
     },
   });
 }

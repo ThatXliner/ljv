@@ -1,7 +1,8 @@
 export type FrequencyBand = 'bass' | 'mids' | 'highs' | 'melody';
 
 interface BandAnalyser {
-  filter?: BiquadFilterNode;
+  filterLeft?: BiquadFilterNode;
+  filterRight?: BiquadFilterNode;
   analyserLeft: AnalyserNode;
   analyserRight: AnalyserNode;
   leftData: Float32Array;
@@ -155,7 +156,7 @@ export class AudioEngine {
     return filter;
   }
 
-  private createBandAnalyser(filter?: BiquadFilterNode): BandAnalyser {
+  private createBandAnalyser(): BandAnalyser {
     if (!this.audioContext) {
       throw new Error('AudioContext not initialized');
     }
@@ -169,7 +170,6 @@ export class AudioEngine {
     analyserRight.smoothingTimeConstant = 0.8;
 
     return {
-      filter,
       analyserLeft,
       analyserRight,
       leftData: new Float32Array(this.fftSize),
@@ -235,8 +235,9 @@ export class AudioEngine {
         const filterRight = this.createBandFilter(band);
 
         if (filterLeft && filterRight) {
-          // Store filters for cleanup
-          analyser.filter = filterLeft;
+          // Store both filter references for live parameter updates
+          analyser.filterLeft = filterLeft;
+          analyser.filterRight = filterRight;
 
           // Connect: splitter -> filter -> analyser for each channel
           this.splitter.connect(filterLeft, 0);
@@ -307,15 +308,15 @@ export class AudioEngine {
     return this.rightChannelData;
   }
 
-  getBandData(band: FrequencyBand): { left: Float32Array; right: Float32Array } | null {
+  getBandData(band: FrequencyBand, harmonicDepth = 8): { left: Float32Array; right: Float32Array } | null {
     const analyser = this.bandAnalysers.get(band);
     if (!analyser) {
       return null;
     }
 
     if (band === 'melody') {
-      // For melody, use FFT to extract dominant frequencies
-      return this.extractMelodyData(analyser);
+      // For melody, use FFT resynthesis with N strongest harmonics
+      return this.extractMelodyData(analyser, harmonicDepth);
     }
 
     // Get time domain data for filtered bands
@@ -328,71 +329,78 @@ export class AudioEngine {
     };
   }
 
-  private extractMelodyData(analyser: BandAnalyser): { left: Float32Array; right: Float32Array } {
+  updateBandFilter(band: FrequencyBand, frequency: number, q: number): void {
+    const analyser = this.bandAnalysers.get(band);
+    if (!analyser || band === 'melody') return;
+    if (analyser.filterLeft) {
+      analyser.filterLeft.frequency.value = frequency;
+      analyser.filterLeft.Q.value = q;
+    }
+    if (analyser.filterRight) {
+      analyser.filterRight.frequency.value = frequency;
+      analyser.filterRight.Q.value = q;
+    }
+  }
+
+  private extractMelodyData(
+    analyser: BandAnalyser,
+    harmonicDepth: number
+  ): { left: Float32Array; right: Float32Array } {
     const frequencyBins = analyser.analyserLeft.frequencyBinCount;
-    const leftFreqData = new Float32Array(frequencyBins);
-    const rightFreqData = new Float32Array(frequencyBins);
+    const freqDataLeft = new Float32Array(frequencyBins);
+    const freqDataRight = new Float32Array(frequencyBins);
 
-    // Get frequency domain data (FFT)
-    analyser.analyserLeft.getFloatFrequencyData(leftFreqData);
-    analyser.analyserRight.getFloatFrequencyData(rightFreqData);
+    analyser.analyserLeft.getFloatFrequencyData(freqDataLeft);
+    analyser.analyserRight.getFloatFrequencyData(freqDataRight);
 
-    // Find dominant frequency bins (top 10% by magnitude)
-    const threshold = this.calculateMagnitudeThreshold(leftFreqData, rightFreqData, 0.9);
-
-    // Extract dominant frequencies and convert back to time domain representation
-    // For simplicity, we'll use the frequency data directly as a proxy for melody
-    // A more sophisticated approach would involve inverse FFT
-
-    // Get time domain data filtered by dominant frequencies
-    analyser.analyserLeft.getFloatTimeDomainData(analyser.leftData);
-    analyser.analyserRight.getFloatTimeDomainData(analyser.rightData);
-
-    // Apply simple emphasis on regions with strong frequency content
-    const leftTime = new Float32Array(analyser.leftData);
-    const rightTime = new Float32Array(analyser.rightData);
-
-    // Calculate overall frequency band energy to weight the time domain data
-    let leftEnergy = 0;
-    let rightEnergy = 0;
-    for (let i = 0; i < frequencyBins; i++) {
-      if (leftFreqData[i] > threshold) {
-        leftEnergy += Math.pow(10, leftFreqData[i] / 20); // Convert dB to linear
-      }
-      if (rightFreqData[i] > threshold) {
-        rightEnergy += Math.pow(10, rightFreqData[i] / 20);
-      }
-    }
-
-    // Normalize and emphasize based on frequency energy
-    const leftScale = Math.min(2.0, 1.0 + leftEnergy / frequencyBins);
-    const rightScale = Math.min(2.0, 1.0 + rightEnergy / frequencyBins);
-
-    for (let i = 0; i < leftTime.length; i++) {
-      leftTime[i] *= leftScale;
-      rightTime[i] *= rightScale;
-    }
+    const outputLength = this.fftSize;
 
     return {
-      left: leftTime,
-      right: rightTime,
+      left: this.resynthesizeChannel(freqDataLeft, harmonicDepth, outputLength),
+      right: this.resynthesizeChannel(freqDataRight, harmonicDepth, outputLength),
     };
   }
 
-  private calculateMagnitudeThreshold(
-    leftFreq: Float32Array,
-    rightFreq: Float32Array,
-    percentile: number
-  ): number {
-    // Combine and sort frequency magnitudes
-    const combined = new Float32Array(leftFreq.length + rightFreq.length);
-    combined.set(leftFreq, 0);
-    combined.set(rightFreq, leftFreq.length);
+  private resynthesizeChannel(
+    freqData: Float32Array,
+    harmonicDepth: number,
+    outputLength: number
+  ): Float32Array {
+    const numBins = freqData.length;
 
-    const sorted = Array.from(combined).sort((a, b) => a - b);
-    const index = Math.floor(sorted.length * percentile);
+    // Convert dB → linear amplitude; clamp -Infinity bins to 0
+    const amplitudes = new Float32Array(numBins);
+    for (let i = 0; i < numBins; i++) {
+      const db = freqData[i];
+      amplitudes[i] = isFinite(db) ? Math.pow(10, db / 20) : 0;
+    }
 
-    return sorted[index];
+    // Find indices of top-N bins by amplitude
+    const depth = Math.max(1, Math.min(harmonicDepth, numBins));
+    const indices = Array.from({ length: numBins }, (_, i) => i);
+    indices.sort((a, b) => amplitudes[b] - amplitudes[a]);
+    const topIndices = indices.slice(0, depth);
+
+    // Sum of selected amplitudes for normalization
+    let ampSum = 0;
+    for (const idx of topIndices) {
+      ampSum += amplitudes[idx];
+    }
+    if (ampSum === 0) {
+      return new Float32Array(outputLength);
+    }
+
+    // Synthesize: out[t] = Σ A_i * cos(2π * binIndex_i * t / outputLength)
+    const out = new Float32Array(outputLength);
+    const twoPiOverN = (2 * Math.PI) / outputLength;
+    for (const idx of topIndices) {
+      const a = amplitudes[idx] / ampSum;
+      for (let t = 0; t < outputLength; t++) {
+        out[t] += a * Math.cos(twoPiOverN * idx * t);
+      }
+    }
+
+    return out;
   }
 
   updateCurrentTime(): void {

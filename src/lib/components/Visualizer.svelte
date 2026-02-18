@@ -92,7 +92,10 @@
           const config = visualizerState.bands[band];
           if (!config.enabled) continue;
 
-          const bandData = audioEngine.getBandData(band);
+          const bandData = audioEngine.getBandData(
+            band,
+            band === 'melody' ? visualizerState.bands.melody.melodyHarmonicDepth : 1
+          );
           if (!bandData) continue;
 
           const points = audioToLissajousPoints(

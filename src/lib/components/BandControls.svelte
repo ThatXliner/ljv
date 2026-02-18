@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { visualizerState } from '$lib/stores/visualizer.svelte';
+  import { visualizerState, audioEngine } from '$lib/stores/visualizer.svelte';
   import type { FrequencyBand } from '$lib/audio/AudioEngine.svelte';
 
   const bandLabels: Record<FrequencyBand, string> = {
@@ -15,6 +15,25 @@
     highs: '4000+ Hz',
     melody: 'Dominant frequencies',
   };
+
+  // Filter slider ranges per band
+  const filterFreqRange: Record<FrequencyBand, { min: number; max: number } | null> = {
+    bass:   { min: 20,   max: 2000  },
+    mids:   { min: 200,  max: 8000  },
+    highs:  { min: 1000, max: 20000 },
+    melody: null,
+  };
+
+  // Propagate filter param changes to the audio engine live
+  $effect(() => {
+    for (const band of ['bass', 'mids', 'highs'] as FrequencyBand[]) {
+      audioEngine.updateBandFilter(
+        band,
+        visualizerState.bands[band].filterFrequency,
+        visualizerState.bands[band].filterQ,
+      );
+    }
+  });
 
   function rgbToHex(r: number, g: number, b: number): string {
     const toHex = (n: number) => {
@@ -118,6 +137,51 @@
                   </select>
                 </label>
               </div>
+
+              {#if filterFreqRange[band as FrequencyBand] !== null}
+                {@const freqRange = filterFreqRange[band as FrequencyBand]!}
+                <div class="config-row">
+                  <label class="slider-control">
+                    <span class="control-label">
+                      <span>Cutoff Freq</span>
+                      <span class="value">{config.filterFrequency} Hz</span>
+                    </span>
+                    <input
+                      type="range"
+                      bind:value={config.filterFrequency}
+                      min={freqRange.min}
+                      max={freqRange.max}
+                      step="1"
+                    />
+                  </label>
+
+                  <label class="slider-control">
+                    <span class="control-label">
+                      <span>Q</span>
+                      <span class="value">{config.filterQ.toFixed(1)}</span>
+                    </span>
+                    <input
+                      type="range"
+                      bind:value={config.filterQ}
+                      min="0.1"
+                      max="10"
+                      step="0.1"
+                    />
+                  </label>
+                </div>
+              {/if}
+
+              {#if band === 'melody'}
+                <div class="config-row">
+                  <label class="slider-control">
+                    <span class="control-label">
+                      <span>Harmonic Depth</span>
+                      <span class="value">{config.melodyHarmonicDepth}</span>
+                    </span>
+                    <input type="range" bind:value={config.melodyHarmonicDepth} min="1" max="32" step="1" />
+                  </label>
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
