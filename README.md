@@ -48,6 +48,32 @@ cd ljv
 bun install
 ```
 
+---
+
+## Web Build & GitHub Pages
+
+This project can run both as a Tauri desktop app and as a static web app. The frontend detects whether it's running inside Tauri at runtime and uses platform-appropriate APIs (Tauri file dialog + fs) or standard Web APIs (file input, fetch).
+
+To build a web-friendly static site and deploy to GitHub Pages:
+
+1. Set the GH_PAGES_BASE environment variable if your site will be served from a subpath (for example, "/my-repo/"). If your repository is named `ljv` and you host at `https://<user>.github.io/ljv`, set GH_PAGES_BASE to `/ljv/`.
+
+2. Build the site:
+
+   ```bash
+   GH_PAGES_BASE=/ljv/ bun run build:web
+   ```
+
+3. Commit the generated `dist` or `build` output (SvelteKit will output to `build/` by default) and push to the `gh-pages` branch, or use GitHub Actions to deploy the `build/` folder to GitHub Pages.
+
+Preview the static build locally:
+
+```bash
+bun run preview:build
+```
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. See [contributing guidelines](CONTRIBUTING.md) for more details.

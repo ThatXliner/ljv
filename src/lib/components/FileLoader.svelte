@@ -1,56 +1,92 @@
 <script lang="ts">
-  import { open } from '@tauri-apps/plugin-dialog';
-  import { readFile } from '@tauri-apps/plugin-fs';
-  import { audioEngine, fileState } from '$lib/stores/visualizer.svelte';
+  import { audioEngine, fileState } from "$lib/stores/visualizer.svelte";
+
+  // Detect Tauri runtime by checking for the Tauri IPC global
+  const isTauri =
+    typeof window !== "undefined" &&
+    (window as any).__TAURI_IPC__ !== undefined;
+
+  const ACCEPT = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"];
 
   async function handleFileSelect() {
     fileState.isLoading = true;
     fileState.error = null;
 
     try {
-      const selected = await open({
-        multiple: false,
-        filters: [
-          {
-            name: 'Audio',
-            extensions: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'],
-          },
-        ],
-      });
+      if (isTauri) {
+        // Dynamically import Tauri APIs so web bundles don't try to execute them
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const { readFile } = await import("@tauri-apps/plugin-fs");
 
-      if (!selected || typeof selected !== 'string') {
+        const selected = await open({
+          multiple: false,
+          filters: [
+            {
+              name: "Audio",
+              extensions: ACCEPT.map((e) => e.replace(/\./, "")),
+            },
+          ],
+        });
+
+        if (!selected || typeof selected !== "string") {
+          fileState.isLoading = false;
+          return;
+        }
+
+        // Extract file name from path
+        const fileName =
+          selected.split("/").pop() || selected.split("\\").pop() || "Unknown";
+
+        // Read file as bytes
+        const fileData = await readFile(selected);
+
+        // Convert Uint8Array to ArrayBuffer
+        const arrayBuffer = fileData.buffer.slice(
+          fileData.byteOffset,
+          fileData.byteOffset + fileData.byteLength
+        );
+
+        // Load into audio engine
+        await audioEngine.loadAudioFile(arrayBuffer, fileName);
+
+        fileState.fileName = fileName;
         fileState.isLoading = false;
         return;
       }
 
-      // Extract file name from path
-      const fileName = selected.split('/').pop() || selected.split('\\').pop() || 'Unknown';
+      // Web fallback: use a hidden file input and read via File API
+      const file = await new Promise<File | null>((resolve) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ACCEPT.join(",");
+        input.onchange = () => resolve(input.files?.[0] ?? null);
+        input.click();
+      });
 
-      // Read file as bytes
-      const fileData = await readFile(selected);
+      if (!file) {
+        fileState.isLoading = false;
+        return;
+      }
 
-      // Convert Uint8Array to ArrayBuffer
-      const arrayBuffer = fileData.buffer.slice(
-        fileData.byteOffset,
-        fileData.byteOffset + fileData.byteLength
-      );
-
-      // Load into audio engine
-      await audioEngine.loadAudioFile(arrayBuffer, fileName);
-
-      fileState.fileName = fileName;
+      const arrayBuffer = await file.arrayBuffer();
+      await audioEngine.loadAudioFile(arrayBuffer, file.name);
+      fileState.fileName = file.name;
+      fileState.isLoading = false;
     } catch (err: any) {
-      fileState.error = err.message || 'Failed to load audio file';
-      console.error('Error loading file:', err);
-    } finally {
+      fileState.error = err?.message || "Failed to load audio file";
+      console.error("Error loading file:", err);
       fileState.isLoading = false;
     }
   }
 </script>
 
 <div class="file-loader">
-  <button class="load-button" onclick={handleFileSelect} disabled={fileState.isLoading}>
-    {fileState.isLoading ? 'Loading...' : 'Select Audio File'}
+  <button
+    class="load-button"
+    onclick={handleFileSelect}
+    disabled={fileState.isLoading}
+  >
+    {fileState.isLoading ? "Loading..." : "Select Audio File"}
   </button>
 
   {#if fileState.fileName}
@@ -74,7 +110,8 @@
     color: #e8e4dc;
     border: 1px solid #2a2a2a;
     border-radius: 0;
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", "Cascadia Code", Consolas,
+      monospace;
     font-size: 0.65rem;
     font-weight: 400;
     letter-spacing: 0.1em;
@@ -100,13 +137,15 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", "Cascadia Code", Consolas,
+      monospace;
   }
 
   .error {
     margin-top: 0.4rem;
     font-size: 0.65rem;
     color: #c0392b;
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", "Cascadia Code", Consolas,
+      monospace;
   }
 </style>

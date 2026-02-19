@@ -1,0 +1,52 @@
+# GitHub Actions workflow to build the static frontend and deploy the `build/` output to GitHub Pages.
+# - Uses the official Upload/Deploy Pages actions
+# - Builds using the project's `build:web` script which honors GH_PAGES_BASE
+# - Triggered on pushes to `main` (adjust branch as needed) and manually via workflow_dispatch
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'Optional GH_PAGES_BASE (e.g. /my-repo/). If omitted the workflow will set /<repo-name>/ by default.'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static site
+        env:
+          # Use input base if provided, otherwise default to /<repo-name>/ which works well for project pages.
+          GH_PAGES_BASE: "${{ github.event.inputs.base || format('/{0}/', github.event.repository.name) }}"
+        run: npm run build:web
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
