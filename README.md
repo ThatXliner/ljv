@@ -1,5 +1,7 @@
 # LJV - Lissajous Visualizer
 
+![Screenshot](./screenshot.png)
+
 A beautiful real-time music visualizer that creates mesmerizing Lissajous curves from your audio files. Built with modern web technologies and packaged as a native desktop application.
 
 
