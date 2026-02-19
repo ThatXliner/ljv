@@ -21,22 +21,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '18'
+          bun-version: 'latest'
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Build static site
         env:
           # Use input base if provided, otherwise default to /<repo-name>/ which works well for project pages.
           GH_PAGES_BASE: "${{ github.event.inputs.base || format('/{0}/', github.event.repository.name) }}"
-        run: npm run build:web
+        run: bun run build:web
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v6
         with:
           path: ./build
 
