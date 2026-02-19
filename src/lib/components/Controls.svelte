@@ -31,8 +31,13 @@
   <h2>Playback</h2>
 
   <div class="playback-controls">
-    <button class="play-button" onclick={togglePlayback} disabled={!audioEngine.fileName}>
-      {audioEngine.isPlaying ? '⏸ Pause' : '▶ Play'}
+    <button
+      class="play-button"
+      class:playing={audioEngine.isPlaying}
+      onclick={togglePlayback}
+      disabled={!audioEngine.fileName}
+    >
+      {audioEngine.isPlaying ? 'PAUSE' : 'PLAY'}
     </button>
 
     {#if audioEngine.duration > 0}
@@ -190,19 +195,21 @@
     />
   </div>
 
-  <div class="parameter">
-    <label>
-      <span class="label-text">Point Size</span>
-      <span class="value">{visualizerState.pointSize.toFixed(1)}</span>
-    </label>
-    <input
-      type="range"
-      bind:value={visualizerState.pointSize}
-      min="1"
-      max="10"
-      step="0.5"
-    />
-  </div>
+  {#if visualizerState.renderMode === 'points'}
+    <div class="parameter">
+      <label>
+        <span class="label-text">Point Size</span>
+        <span class="value">{visualizerState.pointSize.toFixed(1)}</span>
+      </label>
+      <input
+        type="range"
+        bind:value={visualizerState.pointSize}
+        min="1"
+        max="10"
+        step="0.5"
+      />
+    </div>
+  {/if}
 
   {#if !visualizerState.useMutliBand}
     <div class="parameter">
@@ -306,14 +313,17 @@
 
 <style>
   .controls {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   h2 {
-    font-size: 1rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    color: #e5e7eb;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #444;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+    font-weight: 400;
   }
 
   .playback-controls {
@@ -324,23 +334,33 @@
 
   .play-button {
     width: 100%;
-    padding: 0.75rem;
-    background: #10b981;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: #e8e4dc;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: border-color 0.1s;
+    height: 28px;
   }
 
   .play-button:hover:not(:disabled) {
-    background: #059669;
+    border-color: #666;
+  }
+
+  .play-button:not(:disabled).playing {
+    background: #e8e4dc;
+    color: #111;
+    border-color: #e8e4dc;
   }
 
   .play-button:disabled {
-    background: #6b7280;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
@@ -348,135 +368,179 @@
     display: flex;
     justify-content: center;
     gap: 0.5rem;
-    font-size: 0.85rem;
-    color: #9ca3af;
+    font-size: 0.65rem;
+    color: #666;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
   }
 
   .seek-bar {
     width: 100%;
+    height: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2a;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 6px;
+    height: 6px;
+    background: #e8e4dc;
+    cursor: pointer;
   }
 
   .parameter {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   label {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.25rem;
-    font-size: 0.85rem;
-    color: #d1d5db;
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .label-text {
-    font-weight: 500;
+    font-weight: 400;
   }
 
   .value {
-    color: #9ca3af;
-    font-family: monospace;
+    color: #e8e4dc;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.7rem;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
-  input[type='range'],
-  select {
+  input[type='range'] {
     width: 100%;
-    accent-color: #2563eb;
+    height: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2a;
+    outline: none;
+    cursor: pointer;
+    accent-color: #e8e4dc;
   }
 
-  select {
-    padding: 0.5rem;
-    background: #374151;
-    color: white;
-    border: 1px solid #4b5563;
-    border-radius: 0.375rem;
-    font-size: 0.85rem;
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 6px;
+    height: 6px;
+    background: #e8e4dc;
     cursor: pointer;
   }
 
+  select {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    background: #111;
+    color: #e8e4dc;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    height: 28px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   select:hover {
-    border-color: #6b7280;
+    border-color: #444;
+  }
+
+  select:focus {
+    outline: 1px solid #e8e4dc;
   }
 
   .device-selector {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #374151;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #2a2a2a;
   }
 
   .device-selector label {
     display: block;
     margin-bottom: 0.25rem;
-    font-size: 0.85rem;
-    color: #d1d5db;
-  }
-
-  input[type='checkbox'] {
-    width: auto;
-    margin-left: 0.5rem;
-    cursor: pointer;
   }
 
   .reset-button {
     width: 100%;
-    padding: 0.5rem;
-    background: #374151;
-    color: white;
-    border: 1px solid #4b5563;
-    border-radius: 0.375rem;
-    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: #e8e4dc;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: border-color 0.1s;
+    height: 28px;
   }
 
   .reset-button:hover {
-    background: #4b5563;
+    border-color: #666;
   }
 
   .help-text {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     padding: 0.75rem;
-    background: #1f2937;
-    border-left: 3px solid #2563eb;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: #9ca3af;
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    font-size: 0.6rem;
+    line-height: 1.6;
+    color: #666;
   }
 
   .help-text strong {
-    color: #d1d5db;
+    color: #e8e4dc;
     display: block;
     margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 400;
   }
 
   .toggle-group {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .toggle-button {
     flex: 1;
-    padding: 0.75rem;
-    background: #374151;
-    color: #9ca3af;
-    border: 2px solid #4b5563;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 0.5rem;
+    background: transparent;
+    color: #666;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+    height: 28px;
   }
 
   .toggle-button:hover {
-    background: #4b5563;
-    border-color: #6b7280;
+    border-color: #444;
   }
 
   .toggle-button.active {
-    background: #2563eb;
-    color: white;
-    border-color: #2563eb;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+    background: #e8e4dc;
+    color: #111;
+    border-color: #e8e4dc;
   }
 </style>

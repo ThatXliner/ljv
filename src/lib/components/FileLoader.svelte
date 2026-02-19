@@ -64,41 +64,49 @@
 
 <style>
   .file-loader {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   .load-button {
     width: 100%;
-    padding: 0.75rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: #e8e4dc;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: border-color 0.1s;
+    height: 28px;
   }
 
   .load-button:hover:not(:disabled) {
-    background: #1d4ed8;
+    border-color: #666;
   }
 
   .load-button:disabled {
-    background: #6b7280;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
   .file-name {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: #9ca3af;
-    word-break: break-all;
+    margin-top: 0.4rem;
+    font-size: 0.65rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
   }
 
   .error {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: #ef4444;
+    margin-top: 0.4rem;
+    font-size: 0.65rem;
+    color: #c0392b;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
   }
 </style>

@@ -183,3 +183,29 @@ And added to `Cargo.toml` and `package.json` dependencies.
 - Use `Float32Array` for audio/point data (avoid allocations in render loop)
 - Canvas resizing is debounced via `ResizeObserver`
 - Additive blending (`GL_SRC_ALPHA, GL_ONE`) creates natural glow without post-processing
+
+---
+
+## Design Context
+
+### Users
+Solo musicians, producers, and audio engineers using this as a personal desktop tool for audio analysis and creative visualization. They use it in a focused, single-task context — typically while listening or mixing. This is a personal tool, not a product for mass-market audiences.
+
+### Brand Personality
+**Sparse. Precise. Industrial.**
+
+Inspired by Teenage Engineering's TX-6 and OB-4 — ultra-minimal hardware that communicates premium craft through restraint. Every element is functional. Nothing decorates. The UI should feel like a precision instrument, not an app.
+
+### Aesthetic Direction
+- **Reference**: Teenage Engineering TX-6 / OB-4 — barely-there UI, matte surfaces, generous negative space, premium without ornamentation
+- **Typography**: Tight, uppercase, monospaced or geometric sans — stencil-style labeling, not body copy
+- **Color**: Near-monochromatic — off-white or warm cream on deep charcoal/near-black. Minimal accent color, used sparingly for state only (not decoration)
+- **Layout**: Grid-based, disciplined spacing, controls feel like panel labels on hardware
+- **Anti-reference**: No fake chrome/gradients/gloss (Winamp-era skeumorphism), no soft-shadow rounded-card SaaS UI (generic Tailwind dark mode)
+
+### Design Principles
+1. **The canvas is the product** — UI chrome should recede; the visualization is the primary content
+2. **Function determines form** — No decorative elements; every visual choice serves a functional purpose
+3. **Restraint over expression** — Fewer colors, less weight, more silence. When in doubt, remove.
+4. **Hardware panel language** — Labels read like engraved panel text: uppercase, tight tracking, no sentences
+5. **Precision over polish** — Crisp edges, exact alignment, deliberate spacing — not rounded softness

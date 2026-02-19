@@ -63,34 +63,48 @@
 </script>
 
 <div class="band-controls">
-  <div class="mode-toggle">
-    <label>
-      <input type="checkbox" bind:checked={visualizerState.useMutliBand} />
-      <span class="toggle-label">Enable Multi-Band Visualization</span>
-    </label>
-  </div>
+  <button
+    class="mode-toggle"
+    class:active={visualizerState.useMutliBand}
+    onclick={() => (visualizerState.useMutliBand = !visualizerState.useMutliBand)}
+  >
+    MULTI-BAND
+  </button>
 
   {#if visualizerState.useMutliBand}
     <div class="bands">
       {#each Object.entries(bandLabels) as [band, label]}
         {@const config = visualizerState.bands[band as FrequencyBand]}
-        <div class="band-section" class:disabled={!config.enabled}>
+        {@const bandColor = rgbToHex(config.color.r, config.color.g, config.color.b)}
+        <div
+          class="band-section"
+          class:disabled={!config.enabled}
+          style:border-color={config.enabled ? bandColor : null}
+          onclick={() => (config.enabled = !config.enabled)}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => e.key === 'Enter' || e.key === ' ' ? (config.enabled = !config.enabled) : null}
+        >
           <div class="band-header">
-            <label class="band-title">
-              <input type="checkbox" bind:checked={config.enabled} />
+            <div
+              class="band-title"
+              class:enabled={config.enabled}
+              style:color={config.enabled ? bandColor : null}
+            >
               <span class="band-name">{label}</span>
-              <span class="band-description">{bandDescriptions[band as FrequencyBand]}</span>
-            </label>
+              <span class="band-freq">{bandDescriptions[band as FrequencyBand]}</span>
+            </div>
           </div>
 
           {#if config.enabled}
-            <div class="band-config">
+            <div class="band-config" onclick={(e) => e.stopPropagation()} role="presentation">
               <div class="config-row">
                 <label class="color-picker">
                   <span>Color</span>
                   <input
                     type="color"
-                    value={rgbToHex(config.color.r, config.color.g, config.color.b)}
+                    value={bandColor}
+                    style:border-color={bandColor}
                     oninput={(e) => handleColorChange(band as FrequencyBand, e)}
                   />
                 </label>
@@ -105,13 +119,15 @@
               </div>
 
               <div class="config-row">
-                <label class="slider-control">
-                  <span class="control-label">
-                    <span>Point Size</span>
-                    <span class="value">{config.pointSize.toFixed(1)}</span>
-                  </span>
-                  <input type="range" bind:value={config.pointSize} min="1" max="10" step="0.5" />
-                </label>
+                {#if config.renderMode === 'points'}
+                  <label class="slider-control">
+                    <span class="control-label">
+                      <span>Point Size</span>
+                      <span class="value">{config.pointSize.toFixed(1)}</span>
+                    </span>
+                    <input type="range" bind:value={config.pointSize} min="1" max="10" step="0.5" />
+                  </label>
+                {/if}
 
                 <label class="slider-control">
                   <span class="control-label">
@@ -194,71 +210,85 @@
   .band-controls {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .mode-toggle {
-    padding: 0.75rem;
-    background: #1f2937;
-    border-radius: 0.5rem;
-  }
-
-  .mode-toggle label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: #666;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+    height: 28px;
+    text-align: left;
   }
 
-  .toggle-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #e5e7eb;
+  .mode-toggle:hover {
+    border-color: #444;
+  }
+
+  .mode-toggle.active {
+    background: #e8e4dc;
+    color: #111;
+    border-color: #e8e4dc;
   }
 
   .bands {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .band-section {
-    background: #1f2937;
-    border-radius: 0.5rem;
+    background: transparent;
+    border: 1px solid #2a2a2a;
     padding: 0.75rem;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-  }
-
-  .band-section:not(.disabled) {
-    border-color: #374151;
+    transition: opacity 0.1s, border-color 0.1s;
+    cursor: pointer;
   }
 
   .band-section.disabled {
-    opacity: 0.5;
+    opacity: 0.3;
   }
 
   .band-header {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .band-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
     cursor: pointer;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    gap: 0.5rem;
   }
 
   .band-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #e5e7eb;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
-  .band-description {
-    font-size: 0.75rem;
-    color: #9ca3af;
+  .band-freq {
+    font-size: 0.6rem;
+    color: #444;
     margin-left: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    letter-spacing: 0;
   }
 
   .band-config {
@@ -266,29 +296,34 @@
     flex-direction: column;
     gap: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #374151;
+    border-top: 1px solid #2a2a2a;
+    cursor: default;
   }
 
   .config-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .color-picker {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.85rem;
-    color: #d1d5db;
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .color-picker input[type='color'] {
-    width: 40px;
-    height: 28px;
-    border: none;
-    border-radius: 0.25rem;
+    width: 28px;
+    height: 20px;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
     cursor: pointer;
+    background: transparent;
+    padding: 0;
   }
 
   .slider-control {
@@ -300,46 +335,68 @@
   .control-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
-    color: #d1d5db;
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .value {
-    color: #9ca3af;
-    font-family: monospace;
+    color: #e8e4dc;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   input[type='range'] {
     width: 100%;
-    accent-color: #2563eb;
+    height: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2a;
+    outline: none;
+    cursor: pointer;
+    accent-color: #e8e4dc;
   }
 
-  input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 6px;
+    height: 6px;
+    background: #e8e4dc;
     cursor: pointer;
-    accent-color: #10b981;
   }
 
   .render-mode {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    font-size: 0.8rem;
-    color: #d1d5db;
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   select {
-    padding: 0.4rem;
-    background: #374151;
-    color: white;
-    border: 1px solid #4b5563;
-    border-radius: 0.375rem;
-    font-size: 0.8rem;
+    padding: 0.25rem 0.4rem;
+    background: #111;
+    color: #e8e4dc;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
     cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   select:hover {
-    border-color: #6b7280;
+    border-color: #444;
+  }
+
+  select:focus {
+    outline: 1px solid #e8e4dc;
   }
 </style>

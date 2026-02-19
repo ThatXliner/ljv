@@ -59,8 +59,6 @@
 </script>
 
 <div class="color-picker">
-  <h2>Colors</h2>
-
   <div class="color-input-group">
     <label>
       <span class="label-text">Custom Color</span>
@@ -96,96 +94,115 @@
 
 <style>
   .color-picker {
-    margin-bottom: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    color: #e5e7eb;
+    margin-bottom: 1rem;
   }
 
   .color-input-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .color-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    border: 1px solid #2a2a2a;
+    padding: 0.25rem;
+    height: 28px;
+    box-sizing: border-box;
   }
 
   .color-input {
-    width: 60px;
-    height: 40px;
+    width: 40px;
+    height: 100%;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 0;
     cursor: pointer;
     background: transparent;
+    padding: 0;
   }
 
   .hex-value {
-    font-family: monospace;
-    font-size: 0.85rem;
-    color: #9ca3af;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.65rem;
+    color: #666;
   }
 
   .parameter {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   label {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.25rem;
-    font-size: 0.85rem;
-    color: #d1d5db;
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .label-text {
-    font-weight: 500;
+    font-weight: 400;
   }
 
   .value {
-    color: #9ca3af;
-    font-family: monospace;
+    color: #e8e4dc;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.7rem;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   input[type='range'] {
     width: 100%;
-    accent-color: #2563eb;
+    height: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2a;
+    outline: none;
+    cursor: pointer;
+    accent-color: #e8e4dc;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 6px;
+    height: 6px;
+    background: #e8e4dc;
+    cursor: pointer;
   }
 
   .presets {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
   }
 
   .presets-label {
     display: block;
-    font-size: 0.85rem;
-    color: #d1d5db;
+    font-size: 0.6rem;
+    color: #444;
     margin-bottom: 0.5rem;
-    font-weight: 500;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   .preset-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .preset-button {
     width: 100%;
     aspect-ratio: 1;
-    border: 2px solid #374151;
-    border-radius: 0.375rem;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.1s;
   }
 
   .preset-button:hover {
-    border-color: #e5e7eb;
-    transform: scale(1.1);
+    border-color: #666;
   }
 </style>

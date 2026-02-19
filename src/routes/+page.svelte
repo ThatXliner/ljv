@@ -38,10 +38,9 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-      sans-serif;
-    background: #000;
-    color: #fff;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Cascadia Code', Consolas, monospace;
+    background: #0a0a0a;
+    color: #e8e4dc;
     overflow: hidden;
   }
 
@@ -54,15 +53,16 @@
 
   .sidebar {
     width: 320px;
-    background: #1a1a1a;
-    color: #fff;
-    padding: 1.5rem;
+    background: #111;
+    color: #e8e4dc;
+    padding: 1rem;
     overflow-y: auto;
-    border-right: 1px solid #333;
+    border-right: 1px solid #2a2a2a;
+    flex-shrink: 0;
   }
 
   .sidebar::-webkit-scrollbar {
-    width: 8px;
+    width: 2px;
   }
 
   .sidebar::-webkit-scrollbar-track {
@@ -70,35 +70,31 @@
   }
 
   .sidebar::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 4px;
-  }
-
-  .sidebar::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #333;
   }
 
   h1 {
-    font-size: 1.5rem;
-    margin: 0 0 1.5rem 0;
+    font-size: 0.75rem;
+    margin: 0 0 1.25rem 0;
     font-weight: 700;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #e8e4dc;
   }
 
   h2 {
-    font-size: 1rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    color: #e5e7eb;
-    font-weight: 600;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #444;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+    font-weight: 400;
   }
 
   .visualizer-container {
     flex: 1;
-    background: #000;
+    background: #0a0a0a;
     position: relative;
   }
 </style>
