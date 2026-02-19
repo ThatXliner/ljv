@@ -5,6 +5,10 @@
 import adapter from "@sveltejs/adapter-static";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
+// For GitHub Pages deployment: SvelteKit overrides Vite's base option,
+// so the base path must be set here via kit.paths.base (without trailing slash).
+const base = process.env.GH_PAGES_BASE?.replace(/\/$/, "") || "";
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   preprocess: vitePreprocess(),
@@ -12,6 +16,9 @@ const config = {
     adapter: adapter({
       fallback: "index.html",
     }),
+    paths: {
+      base,
+    },
   },
 };
 
