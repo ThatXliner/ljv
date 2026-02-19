@@ -6,7 +6,7 @@ import adapter from "@sveltejs/adapter-static";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
 // @ts-expect-error process is a nodejs global
-const base = process.env.GH_PAGES_BASE || '';
+const base = (process.env.GH_PAGES_BASE || '').replace(/\/$/, '');
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
