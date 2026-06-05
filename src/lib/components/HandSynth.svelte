@@ -5,8 +5,8 @@
   import { ChordSynth, type HandParams } from '$lib/audio/ChordSynth';
 
   // --- tunable mapping constants ------------------------------------------
-  const MIN_FREQ = 110; // A2 — hand at bottom of frame
-  const MAX_FREQ = 880; // A5 — hand at top of frame
+  const MIN_FREQ = 220; // A3 — hand at bottom of frame
+  const MAX_FREQ = 1760; // A6 — hand at top of frame
   const HEIGHT_SMOOTHING = 0.35; // EMA factor for the jittery continuous axis
   const MAX_VIBRATO_CENTS = 50;
   const MIN_VIBRATO_RATE = 4;
