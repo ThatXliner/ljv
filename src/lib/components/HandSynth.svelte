@@ -182,9 +182,15 @@
   function loop() {
     if (!running || !landmarker || !videoEl) return;
 
-    if (videoEl.currentTime !== lastVideoTime) {
-      lastVideoTime = videoEl.currentTime;
-      const result = landmarker.detectForVideo(videoEl, performance.now());
+    // Only run inference when the camera produced a new frame, but drive it off
+    // a monotonic clock (MediaPipe requires strictly-increasing timestamps).
+    // video.currentTime can report stale/non-advancing values on a live
+    // MediaStream, which would freeze the HUD — so gate on it loosely and
+    // always feed performance.now().
+    const now = performance.now();
+    if (videoEl.readyState >= 2 && now - lastVideoTime >= 1) {
+      lastVideoTime = now;
+      const result = landmarker.detectForVideo(videoEl, now);
 
       const count = result.landmarks?.length ?? 0;
       if (count > 0) {
