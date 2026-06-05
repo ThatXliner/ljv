@@ -41,6 +41,16 @@ class VisualizerState {
   zMode = $state<'time' | 'frequency' | 'phase' | 'parametric'>('phase'); // How to generate Z coordinate
   zScale = $state(1.0); // Scaling factor for Z depth
 
+  // Hand-synth mode: two hands drawn as two independently-colored curves.
+  handSynthActive = $state(false);
+  handColors = $state<[
+    { r: number; g: number; b: number; a: number },
+    { r: number; g: number; b: number; a: number },
+  ]>([
+    { r: 0.5, g: 0.85, b: 1.0, a: 1.0 }, // hand 1 — cyan
+    { r: 1.0, g: 0.55, b: 0.2, a: 1.0 }, // hand 2 — amber
+  ]);
+
   // Multi-band mode toggle
   useMutliBand = $state(true);
   bands = $state<Record<FrequencyBand, BandConfig>>({

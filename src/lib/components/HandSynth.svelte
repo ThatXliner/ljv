@@ -32,8 +32,12 @@
     fingers: number;
     freq: number;
     vibrato: number;
+    swatch: string; // CSS color matching this hand's curve
   }
   let hudHands = $state<HudHand[]>([]);
+
+  const rgbToCss = (c: { r: number; g: number; b: number }) =>
+    `rgb(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)})`;
 
   let landmarker: HandLandmarker | null = null;
   let synth: ChordSynth | null = null;
@@ -43,7 +47,6 @@
   // Per-hand height EMA, keyed by handedness label so smoothing follows the
   // physical hand even if MediaPipe reorders the landmark array between frames.
   let smoothedHeight: Record<string, number> = {};
-  let prevMultiBand = visualizerState.useMutliBand;
 
   async function start() {
     if (running) return;
@@ -55,20 +58,21 @@
       const ctx = audioEngine.context;
       const la = audioEngine.leftStereoAnalyser;
       const ra = audioEngine.rightStereoAnalyser;
+      const la2 = audioEngine.leftStereoAnalyser2;
+      const ra2 = audioEngine.rightStereoAnalyser2;
       const out = audioEngine.outputNode;
-      if (!ctx || !la || !ra || !out) {
+      if (!ctx || !la || !ra || !la2 || !ra2 || !out) {
         status = 'NO AUDIO';
         return;
       }
       if (ctx.state === 'suspended') await ctx.resume();
-      synth = new ChordSynth(ctx, la, ra, out);
+      // Each hand's voice group gets its own analyser pair → its own curve.
+      synth = new ChordSynth(ctx, [[la, ra], [la2, ra2]], out);
       synth.start();
       synth.setActive(true);
 
-      // The synth feeds the single-band stereo analysers; switch the
-      // visualizer to single-band so the curve actually shows it.
-      prevMultiBand = visualizerState.useMutliBand;
-      visualizerState.useMutliBand = false;
+      // Draw the two hands as two colored curves (own render branch).
+      visualizerState.handSynthActive = true;
 
       // 2. Webcam
       stream = await navigator.mediaDevices.getUserMedia({
@@ -114,7 +118,7 @@
     landmarker = null;
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
-    visualizerState.useMutliBand = prevMultiBand;
+    visualizerState.handSynthActive = false;
   }
 
   function toggle() {
@@ -214,6 +218,8 @@
             fingers: p.fingers,
             freq: Math.round(p.baseFrequency),
             vibrato: Math.round(p.vibratoDepthCents),
+            // hud[i] → voice group i → curve color i
+            swatch: rgbToCss(visualizerState.handColors[i] ?? visualizerState.handColors[0]),
           });
         }
 
@@ -253,9 +259,12 @@
       {#if hudHands.length === 0}
         <div class="row"><span>HAND</span><b>—</b></div>
       {/if}
-      {#each hudHands as hand (hand.label)}
+      {#each hudHands as hand, i (i)}
         <div class="hand-block">
-          <div class="row"><span>{hand.label} CHORD</span><b>{hand.chord}</b></div>
+          <div class="row">
+            <span><i class="swatch" style="background:{hand.swatch}"></i>{hand.label} CHORD</span>
+            <b>{hand.chord}</b>
+          </div>
           <div class="row"><span>{hand.label} FINGERS</span><b>{hand.fingers}</b></div>
           <div class="row"><span>{hand.label} PITCH</span><b>{hand.freq} HZ</b></div>
           <div class="row"><span>{hand.label} VIB</span><b>{hand.vibrato} ¢</b></div>
@@ -349,6 +358,13 @@
     margin-top: 0.35rem;
     padding-top: 0.25rem;
     border-top: 1px solid #1e1e1e;
+  }
+  .swatch {
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    margin-right: 0.4em;
+    vertical-align: middle;
   }
 
   .hint {

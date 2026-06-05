@@ -86,7 +86,45 @@
 
       const curves: CurveData[] = [];
 
-      if (visualizerState.useMutliBand) {
+      if (visualizerState.handSynthActive) {
+        // Hand-synth: each hand's voice group has its own stereo analyser pair,
+        // drawn as its own colored curve.
+        const pairs = [
+          {
+            left: audioEngine.getLeftChannelData(),
+            right: audioEngine.getRightChannelData(),
+            color: visualizerState.handColors[0],
+          },
+          {
+            left: audioEngine.getLeftChannelData2(),
+            right: audioEngine.getRightChannelData2(),
+            color: visualizerState.handColors[1],
+          },
+        ];
+
+        for (const p of pairs) {
+          const points = audioToLissajousPoints(
+            p.left,
+            p.right,
+            visualizerState.trailLength,
+            visualizerState.frequencyRatioX,
+            visualizerState.frequencyRatioY,
+            visualizerState.phase,
+            visualizerState.enable3D,
+            visualizerState.zMode,
+            visualizerState.zScale,
+            visualizerState.frequencyRatioZ,
+            visualizerState.phaseZ
+          );
+
+          curves.push({
+            points,
+            color: [p.color.r, p.color.g, p.color.b, p.color.a],
+            pointSize: visualizerState.pointSize,
+            renderMode: visualizerState.renderMode,
+          });
+        }
+      } else if (visualizerState.useMutliBand) {
         // Multi-band: render each enabled frequency band
         for (const band of ['bass', 'mids', 'highs', 'melody'] as FrequencyBand[]) {
           const config = visualizerState.bands[band];

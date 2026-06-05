@@ -61,7 +61,16 @@ export interface ChordSynthState {
  */
 class VoiceGroup {
   private ctx: AudioContext;
-  private voices: { osc: OscillatorNode; gain: GainNode }[] = [];
+  // Each voice has two oscillators tracking the same pitch/gate: a sawtooth
+  // for audio (rich, buzzy) and a sine for the analysers (clean Lissajous
+  // loops). Each has its own gain, driven to the same level in update() so the
+  // two paths share one envelope.
+  private voices: {
+    saw: OscillatorNode;
+    sine: OscillatorNode;
+    audioGain: GainNode;
+    visGain: GainNode;
+  }[] = [];
   private lfo: OscillatorNode;
   private lfoDepth: GainNode;
   private started = false;
@@ -70,16 +79,45 @@ class VoiceGroup {
   private currentBaseFreq = 0;
 
   /**
+   * Each group has its OWN stereo buses + analyser pair, so it can be drawn as
+   * an independently-colored curve, while also mixing into the shared master
+   * for audio output.
+   *
+   * Audio and visualization are DIFFERENT waveforms: sawtooth is sent to the
+   * speakers, a parallel sine is sent to the analysers — so the sound is rich
+   * but the curve stays clean.
+   *
    * @param panEvenLeft  if true, even voices pan left / odd right; if false,
    *                     the parity is flipped so two groups decorrelate.
    */
   constructor(
     ctx: AudioContext,
-    leftBus: AudioNode,
-    rightBus: AudioNode,
+    master: AudioNode,
+    leftAnalyser: AnalyserNode,
+    rightAnalyser: AnalyserNode,
     panEvenLeft: boolean
   ) {
     this.ctx = ctx;
+
+    // Audio path: sawtooth voices → stereo buses → merger → master.
+    const audioL = ctx.createGain();
+    const audioR = ctx.createGain();
+    const audioMerger = ctx.createChannelMerger(2);
+    audioL.connect(audioMerger, 0, 0);
+    audioR.connect(audioMerger, 0, 1);
+    audioMerger.connect(master);
+
+    // Visualization path: sine voices → separate stereo buses → merger →
+    // splitter → this group's analyser pair.
+    const visL = ctx.createGain();
+    const visR = ctx.createGain();
+    const visMerger = ctx.createChannelMerger(2);
+    visL.connect(visMerger, 0, 0);
+    visR.connect(visMerger, 0, 1);
+    const splitter = ctx.createChannelSplitter(2);
+    visMerger.connect(splitter);
+    splitter.connect(leftAnalyser, 0);
+    splitter.connect(rightAnalyser, 1);
 
     this.lfo = ctx.createOscillator();
     this.lfo.frequency.value = 5;
@@ -88,21 +126,31 @@ class VoiceGroup {
     this.lfo.connect(this.lfoDepth);
 
     for (let i = 0; i < VOICES_PER_GROUP; i++) {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = 220;
+      const saw = ctx.createOscillator();
+      saw.type = 'sawtooth';
+      saw.frequency.value = 220;
 
-      // Vibrato fans into every voice's detune.
-      this.lfoDepth.connect(osc.detune);
+      const sine = ctx.createOscillator();
+      sine.type = 'sine';
+      sine.frequency.value = 220;
 
-      const gain = ctx.createGain();
-      gain.gain.value = 0; // off until a chord assigns it
+      // Vibrato fans into both oscillators' detune so they stay locked.
+      this.lfoDepth.connect(saw.detune);
+      this.lfoDepth.connect(sine.detune);
 
-      osc.connect(gain);
       const toLeft = (i % 2 === 0) === panEvenLeft;
-      gain.connect(toLeft ? leftBus : rightBus);
+      // Saw → audio bus, sine → vis bus. Separate gains, set to the same level
+      // in update() so both paths share one envelope.
+      const audioGain = ctx.createGain();
+      const visGain = ctx.createGain();
+      audioGain.gain.value = 0; // off until a chord assigns it
+      visGain.gain.value = 0;
+      saw.connect(audioGain);
+      sine.connect(visGain);
+      audioGain.connect(toLeft ? audioL : audioR);
+      visGain.connect(toLeft ? visL : visR);
 
-      this.voices.push({ osc, gain });
+      this.voices.push({ saw, sine, audioGain, visGain });
     }
   }
 
@@ -110,7 +158,10 @@ class VoiceGroup {
     if (this.started) return;
     this.started = true;
     this.lfo.start();
-    for (const v of this.voices) v.osc.start();
+    for (const v of this.voices) {
+      v.saw.start();
+      v.sine.start();
+    }
   }
 
   /** Retune/gate this group's voices for one hand's params. */
@@ -127,12 +178,17 @@ class VoiceGroup {
       const v = this.voices[i];
       if (i < quality.intervals.length) {
         const freq = p.baseFrequency * semitoneToRatio(quality.intervals[i]);
-        // Portamento on pitch — continuous glissando as the hand moves.
-        v.osc.frequency.setTargetAtTime(freq, now, 0.04);
+        // Portamento on pitch — continuous glissando as the hand moves. Both
+        // oscillators track the same frequency.
+        v.saw.frequency.setTargetAtTime(freq, now, 0.04);
+        v.sine.frequency.setTargetAtTime(freq, now, 0.04);
         // Halve per-group level so two stacked chords don't clip.
-        v.gain.gain.setTargetAtTime(0.5 / quality.intervals.length, now, 0.04);
+        const level = 0.5 / quality.intervals.length;
+        v.audioGain.gain.setTargetAtTime(level, now, 0.04);
+        v.visGain.gain.setTargetAtTime(level, now, 0.04);
       } else {
-        v.gain.gain.setTargetAtTime(0, now, 0.04);
+        v.audioGain.gain.setTargetAtTime(0, now, 0.04);
+        v.visGain.gain.setTargetAtTime(0, now, 0.04);
       }
     }
   }
@@ -141,7 +197,10 @@ class VoiceGroup {
   silence(): void {
     const now = this.ctx.currentTime;
     this.currentChordName = 'MUTE';
-    for (const v of this.voices) v.gain.gain.setTargetAtTime(0, now, 0.04);
+    for (const v of this.voices) {
+      v.audioGain.gain.setTargetAtTime(0, now, 0.04);
+      v.visGain.gain.setTargetAtTime(0, now, 0.04);
+    }
   }
 
   get state(): VoiceGroupState {
@@ -156,7 +215,10 @@ class VoiceGroup {
     try {
       if (this.started) {
         this.lfo.stop();
-        for (const v of this.voices) v.osc.stop();
+        for (const v of this.voices) {
+          v.saw.stop();
+          v.sine.stop();
+        }
       }
     } catch {
       /* already stopped */
@@ -171,38 +233,28 @@ export class ChordSynth {
   private masterGain: GainNode;
   private started = false;
 
+  /**
+   * @param analyserPairs  one [left, right] analyser pair PER voice group, so
+   *                       each hand renders as its own colored curve.
+   */
   constructor(
     ctx: AudioContext,
-    leftAnalyser: AnalyserNode,
-    rightAnalyser: AnalyserNode,
+    analyserPairs: [AnalyserNode, AnalyserNode][],
     output: AudioNode
   ) {
     this.ctx = ctx;
 
     this.masterGain = ctx.createGain();
     this.masterGain.gain.value = 0; // silent until activated
+    this.masterGain.connect(output); // audible path
 
-    // Two mono buses (L and R), merged into a stereo signal.
-    const leftBus = ctx.createGain();
-    const rightBus = ctx.createGain();
-    const merger = ctx.createChannelMerger(2);
-    leftBus.connect(merger, 0, 0);
-    rightBus.connect(merger, 0, 1);
-    merger.connect(this.masterGain);
-
-    // Audible path
-    this.masterGain.connect(output);
-
-    // Visualization path: split the master stereo signal and feed the same
-    // analysers the renderer samples.
-    const splitter = ctx.createChannelSplitter(2);
-    this.masterGain.connect(splitter);
-    splitter.connect(leftAnalyser, 0);
-    splitter.connect(rightAnalyser, 1);
-
-    // Two voice groups with opposite pan parity (see class doc).
+    // One voice group per analyser pair, with opposite pan parity so the two
+    // chords decorrelate from each other (see class doc).
     for (let g = 0; g < NUM_GROUPS; g++) {
-      this.groups.push(new VoiceGroup(ctx, leftBus, rightBus, g === 0));
+      const pair = analyserPairs[g] ?? analyserPairs[0];
+      this.groups.push(
+        new VoiceGroup(ctx, this.masterGain, pair[0], pair[1], g === 0)
+      );
     }
   }
 

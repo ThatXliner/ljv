@@ -22,6 +22,13 @@ export class AudioEngine {
   private leftAnalyser: AnalyserNode | null = null;
   private rightAnalyser: AnalyserNode | null = null;
 
+  // Second stereo analyser pair — lets an external source (the hand-synth's
+  // second voice group) be visualized as its own independently-colored curve.
+  private leftAnalyser2: AnalyserNode | null = null;
+  private rightAnalyser2: AnalyserNode | null = null;
+  private auxData2L: Float32Array;
+  private auxData2R: Float32Array;
+
   // Frequency band analysers
   private bandAnalysers: Map<FrequencyBand, BandAnalyser> = new Map();
 
@@ -41,6 +48,8 @@ export class AudioEngine {
   constructor() {
     this.leftChannelData = new Float32Array(this.fftSize);
     this.rightChannelData = new Float32Array(this.fftSize);
+    this.auxData2L = new Float32Array(this.fftSize);
+    this.auxData2R = new Float32Array(this.fftSize);
   }
 
   async initialize(): Promise<void> {
@@ -62,6 +71,15 @@ export class AudioEngine {
     this.rightAnalyser = this.audioContext.createAnalyser();
     this.rightAnalyser.fftSize = this.fftSize;
     this.rightAnalyser.smoothingTimeConstant = 0.8;
+
+    // Second stereo pair for the hand-synth's second voice group.
+    this.leftAnalyser2 = this.audioContext.createAnalyser();
+    this.leftAnalyser2.fftSize = this.fftSize;
+    this.leftAnalyser2.smoothingTimeConstant = 0.8;
+
+    this.rightAnalyser2 = this.audioContext.createAnalyser();
+    this.rightAnalyser2.fftSize = this.fftSize;
+    this.rightAnalyser2.smoothingTimeConstant = 0.8;
 
     this.gainNode = this.audioContext.createGain();
     this.splitter = this.audioContext.createChannelSplitter(2);
@@ -452,6 +470,28 @@ export class AudioEngine {
 
   get rightStereoAnalyser(): AnalyserNode | null {
     return this.rightAnalyser;
+  }
+
+  // Second stereo analyser pair (hand-synth voice group 2).
+  get leftStereoAnalyser2(): AnalyserNode | null {
+    return this.leftAnalyser2;
+  }
+
+  get rightStereoAnalyser2(): AnalyserNode | null {
+    return this.rightAnalyser2;
+  }
+
+  /** Time-domain samples from the second analyser pair, for its own curve. */
+  getLeftChannelData2(): Float32Array {
+    if (!this.leftAnalyser2) return this.auxData2L;
+    this.leftAnalyser2.getFloatTimeDomainData(this.auxData2L);
+    return this.auxData2L;
+  }
+
+  getRightChannelData2(): Float32Array {
+    if (!this.rightAnalyser2) return this.auxData2R;
+    this.rightAnalyser2.getFloatTimeDomainData(this.auxData2R);
+    return this.auxData2R;
   }
 
   get outputNode(): GainNode | null {
