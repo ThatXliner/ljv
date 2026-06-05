@@ -18,11 +18,12 @@
   <aside class="sidebar">
     <h1>Lissajous Visualizer</h1>
     <FileLoader />
-    <DemoAudioLoader />
-    <Controls />
 
     <h2>Hand Synth</h2>
     <HandSynth />
+
+    <DemoAudioLoader />
+    <Controls />
 
     <h2>Frequency Bands</h2>
     <BandControls />
