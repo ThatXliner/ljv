@@ -434,6 +434,30 @@ export class AudioEngine {
     return this.#selectedDeviceId;
   }
 
+  /**
+   * Accessors for external sound sources (e.g. the hand-tracking ChordSynth)
+   * that want to feed the SAME stereo analysers the Lissajous renderer reads,
+   * so a synthesized signal becomes visualizable with no renderer changes.
+   * A source should connect its left output to `leftStereoAnalyser` and its
+   * right output to `rightStereoAnalyser`, and connect to `outputNode` to be
+   * audible.
+   */
+  get context(): AudioContext | null {
+    return this.audioContext;
+  }
+
+  get leftStereoAnalyser(): AnalyserNode | null {
+    return this.leftAnalyser;
+  }
+
+  get rightStereoAnalyser(): AnalyserNode | null {
+    return this.rightAnalyser;
+  }
+
+  get outputNode(): GainNode | null {
+    return this.gainNode;
+  }
+
   destroy(): void {
     if (this.source) {
       this.source.stop();

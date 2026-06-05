@@ -3,6 +3,7 @@
   import Visualizer from '$lib/components/Visualizer.svelte';
   import FileLoader from '$lib/components/FileLoader.svelte';
   import DemoAudioLoader from '$lib/components/DemoAudioLoader.svelte';
+  import HandSynth from '$lib/components/HandSynth.svelte';
   import Controls from '$lib/components/Controls.svelte';
   import ColorPicker from '$lib/components/ColorPicker.svelte';
   import BandControls from '$lib/components/BandControls.svelte';
@@ -19,6 +20,9 @@
     <FileLoader />
     <DemoAudioLoader />
     <Controls />
+
+    <h2>Hand Synth</h2>
+    <HandSynth />
 
     <h2>Frequency Bands</h2>
     <BandControls />
