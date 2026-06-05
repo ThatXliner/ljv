@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+  import {
+    FilesetResolver,
+    HandLandmarker,
+    DrawingUtils,
+    type NormalizedLandmark,
+  } from '@mediapipe/tasks-vision';
   import { audioEngine, visualizerState } from '$lib/stores/visualizer.svelte';
   import { ChordSynth, type HandParams } from '$lib/audio/ChordSynth';
 
@@ -21,6 +26,7 @@
   const PIPS = [3, 6, 10, 14, 18];
 
   let videoEl = $state<HTMLVideoElement | null>(null);
+  let overlayEl = $state<HTMLCanvasElement | null>(null);
   let running = $state(false);
   let status = $state('OFF');
   let handDetected = $state(false);
@@ -40,6 +46,8 @@
     `rgb(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)})`;
 
   let landmarker: HandLandmarker | null = null;
+  let drawUtils: DrawingUtils | null = null;
+  let overlayCtx: CanvasRenderingContext2D | null = null;
   let synth: ChordSynth | null = null;
   let stream: MediaStream | null = null;
   let rafId = 0;
@@ -94,6 +102,12 @@
         numHands: 2,
       });
 
+      // Skeleton overlay drawing context.
+      if (overlayEl) {
+        overlayCtx = overlayEl.getContext('2d');
+        drawUtils = overlayCtx ? new DrawingUtils(overlayCtx) : null;
+      }
+
       running = true;
       status = 'TRACKING';
       loop();
@@ -116,6 +130,11 @@
     synth = null;
     landmarker?.close();
     landmarker = null;
+    if (overlayCtx && overlayEl) {
+      overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height);
+    }
+    drawUtils = null;
+    overlayCtx = null;
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
     visualizerState.handSynthActive = false;
@@ -183,6 +202,32 @@
     return { baseFrequency, fingers, vibratoDepthCents, vibratoRateHz };
   }
 
+  // Draw each detected hand's 21-point skeleton onto the overlay canvas,
+  // colored to match that hand's curve (by voice-group index). The canvas is
+  // CSS-mirrored to align with the mirrored video.
+  function drawSkeletons(landmarks: NormalizedLandmark[][]): void {
+    if (!drawUtils || !overlayCtx || !overlayEl || !videoEl) return;
+
+    // Match canvas backing size to the video's intrinsic frame.
+    const w = videoEl.videoWidth || overlayEl.width;
+    const h = videoEl.videoHeight || overlayEl.height;
+    if (overlayEl.width !== w) overlayEl.width = w;
+    if (overlayEl.height !== h) overlayEl.height = h;
+
+    overlayCtx.clearRect(0, 0, w, h);
+
+    for (let i = 0; i < landmarks.length; i++) {
+      const color = rgbToCss(
+        visualizerState.handColors[i] ?? visualizerState.handColors[0]
+      );
+      drawUtils.drawConnectors(landmarks[i], HandLandmarker.HAND_CONNECTIONS, {
+        color,
+        lineWidth: 3,
+      });
+      drawUtils.drawLandmarks(landmarks[i], { color, fillColor: color, radius: 3 });
+    }
+  }
+
   function loop() {
     if (!running || !landmarker || !videoEl) return;
 
@@ -197,6 +242,7 @@
       const result = landmarker.detectForVideo(videoEl, now);
 
       const count = result.landmarks?.length ?? 0;
+      drawSkeletons(count > 0 ? result.landmarks : []);
       if (count > 0) {
         handDetected = true;
         const params: HandParams[] = [];
@@ -254,6 +300,7 @@
   <div class="preview" class:visible={running}>
     <!-- svelte-ignore a11y_media_has_caption -->
     <video bind:this={videoEl} class="cam" playsinline muted></video>
+    <canvas bind:this={overlayEl} class="overlay"></canvas>
     <div class="hud">
       <div class="row"><span>STATUS</span><b class:live={handDetected}>{status}</b></div>
       {#if hudHands.length === 0}
@@ -325,6 +372,15 @@
     object-fit: cover;
     transform: scaleX(-1); /* mirror — selfie view */
     opacity: 0.55;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1); /* mirror to match the video */
+    pointer-events: none;
   }
 
   .hud {
