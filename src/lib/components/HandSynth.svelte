@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
   import { audioEngine, visualizerState } from '$lib/stores/visualizer.svelte';
-  import { ChordSynth } from '$lib/audio/ChordSynth';
+  import { ChordSynth, type HandParams } from '$lib/audio/ChordSynth';
 
   // --- tunable mapping constants ------------------------------------------
   const MIN_FREQ = 110; // A2 — hand at bottom of frame
@@ -25,18 +25,24 @@
   let status = $state('OFF');
   let handDetected = $state(false);
 
-  // HUD readouts
-  let hudFingers = $state(0);
-  let hudChord = $state('—');
-  let hudFreq = $state(0);
-  let hudVibrato = $state(0);
+  // HUD readouts — one row per detected hand
+  interface HudHand {
+    label: string; // L / R
+    chord: string;
+    fingers: number;
+    freq: number;
+    vibrato: number;
+  }
+  let hudHands = $state<HudHand[]>([]);
 
   let landmarker: HandLandmarker | null = null;
   let synth: ChordSynth | null = null;
   let stream: MediaStream | null = null;
   let rafId = 0;
   let lastVideoTime = -1;
-  let smoothedHeight = 0.5;
+  // Per-hand height EMA, keyed by handedness label so smoothing follows the
+  // physical hand even if MediaPipe reorders the landmark array between frames.
+  let smoothedHeight: Record<string, number> = {};
   let prevMultiBand = visualizerState.useMutliBand;
 
   async function start() {
@@ -81,7 +87,7 @@
           delegate: 'GPU',
         },
         runningMode: 'VIDEO',
-        numHands: 1,
+        numHands: 2,
       });
 
       running = true;
@@ -98,6 +104,8 @@
     running = false;
     status = 'OFF';
     handDetected = false;
+    hudHands = [];
+    smoothedHeight = {};
     if (rafId) cancelAnimationFrame(rafId);
     synth?.setActive(false);
     synth?.destroy();
@@ -135,6 +143,42 @@
     return count;
   }
 
+  // Compute one hand's synth params from its 21 landmarks. `key` identifies
+  // the physical hand for per-hand height smoothing.
+  function handToParams(
+    lm: { x: number; y: number }[],
+    key: string
+  ): HandParams {
+    const wrist = lm[WRIST];
+    const midMcp = lm[MIDDLE_MCP];
+
+    // HEIGHT → base frequency (y is 0 at top; invert so up = higher pitch)
+    const rawHeight = 1 - wrist.y;
+    const prev = smoothedHeight[key] ?? rawHeight;
+    const sm = prev + (rawHeight - prev) * HEIGHT_SMOOTHING;
+    smoothedHeight[key] = sm;
+    const h = Math.max(0, Math.min(1, sm));
+    // exponential (pitch is logarithmic)
+    const baseFrequency = MIN_FREQ * Math.pow(MAX_FREQ / MIN_FREQ, h);
+
+    // FINGERS → chord quality
+    const fingers = countFingers(lm);
+
+    // TILT (roll) → vibrato. Angle of wrist→middle-MCP vector vs vertical.
+    const dx = midMcp.x - wrist.x;
+    const dy = midMcp.y - wrist.y;
+    const roll = Math.atan2(dx, -dy); // 0 = hand pointing straight up
+    const tiltMag = Math.max(
+      0,
+      Math.min(1, (Math.abs(roll) - TILT_DEADZONE) / (TILT_FULL - TILT_DEADZONE))
+    );
+    const vibratoDepthCents = tiltMag * MAX_VIBRATO_CENTS;
+    const vibratoRateHz =
+      MIN_VIBRATO_RATE + tiltMag * (MAX_VIBRATO_RATE - MIN_VIBRATO_RATE);
+
+    return { baseFrequency, fingers, vibratoDepthCents, vibratoRateHz };
+  }
+
   function loop() {
     if (!running || !landmarker || !videoEl) return;
 
@@ -142,46 +186,43 @@
       lastVideoTime = videoEl.currentTime;
       const result = landmarker.detectForVideo(videoEl, performance.now());
 
-      if (result.landmarks && result.landmarks.length > 0) {
+      const count = result.landmarks?.length ?? 0;
+      if (count > 0) {
         handDetected = true;
-        const lm = result.landmarks[0];
-        const wrist = lm[WRIST];
-        const midMcp = lm[MIDDLE_MCP];
+        const params: HandParams[] = [];
+        const hud: HudHand[] = [];
 
-        // HEIGHT → base frequency (y is 0 at top; invert so up = higher pitch)
-        const rawHeight = 1 - wrist.y;
-        smoothedHeight =
-          smoothedHeight + (rawHeight - smoothedHeight) * HEIGHT_SMOOTHING;
-        const h = Math.max(0, Math.min(1, smoothedHeight));
-        // exponential (pitch is logarithmic)
-        const baseFreq = MIN_FREQ * Math.pow(MAX_FREQ / MIN_FREQ, h);
+        for (let i = 0; i < count; i++) {
+          const lm = result.landmarks[i];
+          // MediaPipe labels handedness from the raw (un-mirrored) image; the
+          // preview is mirrored, so flip the label to match what the user sees.
+          const raw = result.handedness?.[i]?.[0]?.categoryName ?? `H${i}`;
+          const label = raw === 'Left' ? 'R' : raw === 'Right' ? 'L' : raw;
+          const key = `${label}${i === 0 ? '' : i}`; // stable per-hand key
 
-        // FINGERS → chord quality
-        const fingers = countFingers(lm);
+          const p = handToParams(lm, key);
+          params.push(p);
+          hud.push({
+            label,
+            chord: '', // filled from synth state after update
+            fingers: p.fingers,
+            freq: Math.round(p.baseFrequency),
+            vibrato: Math.round(p.vibratoDepthCents),
+          });
+        }
 
-        // TILT (roll) → vibrato. Angle of wrist→middle-MCP vector vs vertical.
-        const dx = midMcp.x - wrist.x;
-        const dy = midMcp.y - wrist.y;
-        const roll = Math.atan2(dx, -dy); // 0 = hand pointing straight up
-        const tiltMag = Math.max(
-          0,
-          Math.min(1, (Math.abs(roll) - TILT_DEADZONE) / (TILT_FULL - TILT_DEADZONE))
-        );
-        const vibratoCents = tiltMag * MAX_VIBRATO_CENTS;
-        const vibratoRate =
-          MIN_VIBRATO_RATE + tiltMag * (MAX_VIBRATO_RATE - MIN_VIBRATO_RATE);
+        synth?.updateHands(params);
 
-        synth?.update(baseFreq, fingers, vibratoCents, vibratoRate);
-
-        hudFingers = fingers;
-        hudFreq = Math.round(baseFreq);
-        hudVibrato = Math.round(vibratoCents);
-        hudChord = synth?.state.chordName ?? '—';
+        // Pull resolved chord names back from the synth for the HUD.
+        const gs = synth?.state.groups ?? [];
+        for (let i = 0; i < hud.length; i++) {
+          hud[i].chord = gs[i]?.chordName ?? '—';
+        }
+        hudHands = hud;
       } else {
         handDetected = false;
-        // no hand: fade chord out but keep tracking
-        synth?.update(synth.state.baseFrequency, 0, 0, MIN_VIBRATO_RATE);
-        hudChord = '—';
+        synth?.updateHands([]); // fade all chords out, keep tracking
+        hudHands = [];
       }
     }
 
@@ -203,16 +244,23 @@
     <video bind:this={videoEl} class="cam" playsinline muted></video>
     <div class="hud">
       <div class="row"><span>STATUS</span><b class:live={handDetected}>{status}</b></div>
-      <div class="row"><span>CHORD</span><b>{hudChord}</b></div>
-      <div class="row"><span>FINGERS</span><b>{hudFingers}</b></div>
-      <div class="row"><span>PITCH</span><b>{hudFreq} HZ</b></div>
-      <div class="row"><span>VIBRATO</span><b>{hudVibrato} ¢</b></div>
+      {#if hudHands.length === 0}
+        <div class="row"><span>HAND</span><b>—</b></div>
+      {/if}
+      {#each hudHands as hand (hand.label)}
+        <div class="hand-block">
+          <div class="row"><span>{hand.label} CHORD</span><b>{hand.chord}</b></div>
+          <div class="row"><span>{hand.label} FINGERS</span><b>{hand.fingers}</b></div>
+          <div class="row"><span>{hand.label} PITCH</span><b>{hand.freq} HZ</b></div>
+          <div class="row"><span>{hand.label} VIB</span><b>{hand.vibrato} ¢</b></div>
+        </div>
+      {/each}
     </div>
   </div>
 
   {#if running}
     <p class="hint">
-      HEIGHT → PITCH · FINGERS → CHORD · TILT → VIBRATO
+      EACH HAND · HEIGHT → PITCH · FINGERS → CHORD · TILT → VIBRATO
     </p>
   {/if}
 </div>
@@ -290,6 +338,11 @@
   }
   .row b.live {
     color: #7fd4ff;
+  }
+  .hand-block {
+    margin-top: 0.35rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid #1e1e1e;
   }
 
   .hint {
