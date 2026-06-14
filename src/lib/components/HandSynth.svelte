@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { base } from '$app/paths';
   import {
     FilesetResolver,
     HandLandmarker,
@@ -91,11 +92,13 @@
         await videoEl.play();
       }
 
-      // 3. MediaPipe hand landmarker (assets vendored under /mediapipe)
-      const vision = await FilesetResolver.forVisionTasks('/mediapipe/wasm');
+      // 3. MediaPipe hand landmarker (assets vendored under /mediapipe).
+      // Prefix with SvelteKit's `base` so paths resolve under a deploy subpath
+      // (e.g. GitHub Pages /ljv/); base is '' for Tauri and the dev server.
+      const vision = await FilesetResolver.forVisionTasks(`${base}/mediapipe/wasm`);
       landmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: '/mediapipe/hand_landmarker.task',
+          modelAssetPath: `${base}/mediapipe/hand_landmarker.task`,
           delegate: 'GPU',
         },
         runningMode: 'VIDEO',
