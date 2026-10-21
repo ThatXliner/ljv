@@ -35,7 +35,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -44,7 +47,7 @@ jobs:
         uses: swatinem/rust-cache@v2
 
       - name: Install frontend dependencies
-        run: bun ci
+        run: npm ci
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0

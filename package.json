@@ -30,5 +30,9 @@
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "@tauri-apps/cli": "^2"
-  }
+  },
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+  },
+  "packageManager": "npm@10.9.9"
 }

@@ -33,7 +33,7 @@ Lissajous curves are mathematical figures created by plotting two sinusoidal osc
 
 ### Prerequisites
 
-- Bun (JavaScript runtime)
+- Node.js 22.23.4 or later in the 22.x line with npm
 - Rust (latest stable)
 - System dependencies for Tauri (see [Tauri Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites))
 
@@ -45,7 +45,7 @@ git clone https://github.com/ThatXliner/ljv/tree/main?tab=readme-ov-file
 cd ljv
 
 # Install dependencies
-bun install
+npm ci
 ```
 
 ---
@@ -61,7 +61,7 @@ To build a web-friendly static site and deploy to GitHub Pages:
 2. Build the site:
 
    ```bash
-   GH_PAGES_BASE=/ljv/ bun run build:web
+   GH_PAGES_BASE=/ljv/ npm run build:web
    ```
 
 3. Commit the generated `dist` or `build` output (SvelteKit will output to `build/` by default) and push to the `gh-pages` branch, or use GitHub Actions to deploy the `build/` folder to GitHub Pages.
@@ -69,7 +69,7 @@ To build a web-friendly static site and deploy to GitHub Pages:
 Preview the static build locally:
 
 ```bash
-bun run preview:build
+npm run preview:build
 ```
 
 ---
@@ -92,3 +92,13 @@ AGPL v3.0+
 <p align="center">
   Made with ❤️ using Tauri + SvelteKit
 </p>
+
+## TLS runtime requirements
+
+Build and install with Node.js `^22.23.4 || ^24.22.1 || >=26.12.1`. The `.nvmrc` pins 22.23.4. Older Node releases are unsupported following the [eMudhra intermediate CA compromise](https://emudhra.we-have-a-problem.com/). Use the committed lockfile with `npm ci`. Bun is not a supported installer while its certificate fix is pending.
+
+This floor covers JavaScript build tools and package downloads. Browser and Tauri webview HTTPS requests use the browser or operating system verifier, so keep those updated too.
+
+Run `node scripts/check-tls.mjs` to verify both compromised test chains are rejected and `https://example.com/` still succeeds. Timeouts and DNS errors fail this check.
+
+The npm configuration preserves the previous Bun lockfile versions with `legacy-peer-deps=true`.
