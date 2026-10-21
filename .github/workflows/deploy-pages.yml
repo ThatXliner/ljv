@@ -37,19 +37,22 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup patched Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: "latest"
+          node-version: "22.23.4"
+
+      - name: Verify certificate rejection
+        run: node scripts/check-tls.mjs
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Build static site
         env:
           # Use input base if provided, otherwise default to /<repo-name>/ which works well for project pages.
           GH_PAGES_BASE: "${{ github.event.inputs.base || format('/{0}/', github.event.repository.name) }}"
-        run: bun run build:web
+        run: npm run build:web
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
